@@ -40,6 +40,13 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Reference Include="UnityEditor">
+        <HintPath>..\..\..\..\..\..\Program Files\Unity\Hub\Editor\2022.3.9f1\Editor\Data\Managed\UnityEditor.dll</HintPath>
+        <Private>True</Private>
+      </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
       <PackageReference Update="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Unity.Profiling.Memory;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -65,7 +66,7 @@ namespace Scoops.service
             // Initial pass to build references
             for (int i = 0; i < allComponents.Length; i++)
             {
-                GetObjectReferences(i);
+                GetObjectReferencesSerialized(i);
             }
 
             uint noRefCount = 0;
@@ -222,6 +223,39 @@ namespace Scoops.service
                         else
                         {
                             referenceTracking.Add(refID, 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void GetObjectReferencesSerialized(int index)
+        {
+            var target = allComponents[index];
+
+            if (target is not UnityEngine.Component) { return; }
+
+            Type componentType = target.GetType();
+
+            using (var serializedObject = new SerializedObject(target))
+            {
+                var iterator = serializedObject.GetIterator();
+                while (iterator.Next(false))
+                {
+                    if (iterator.propertyType == SerializedPropertyType.ObjectReference)
+                    {
+                        UnityEngine.Object reference = iterator.objectReferenceValue;
+                        if (reference != null)
+                        {
+                            int refID = reference.GetInstanceID();
+                            if (referenceTracking.ContainsKey(refID))
+                            {
+                                referenceTracking[refID]++;
+                            }
+                            else
+                            {
+                                referenceTracking.Add(refID, 1);
+                            }
                         }
                     }
                 }
