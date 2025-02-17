@@ -40,9 +40,11 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Reference Include="UnityEditor">
-        <HintPath>..\..\..\..\..\..\Program Files\Unity\Hub\Editor\2022.3.9f1\Editor\Data\Managed\UnityEditor.dll</HintPath>
-        <Private>True</Private>
+      <Reference Publicize="True" Include="LethalLevelLoader">
+        <HintPath>..\..\..\Stuff\Modding\Lethal Company\LLL\LethalLevelLoader.dll</HintPath>
+      </Reference>
+      <Reference Include="Unity.RenderPipelines.HighDefinition.Runtime">
+        <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.RenderPipelines.HighDefinition.Runtime.dll</HintPath>
       </Reference>
     </ItemGroup>
 

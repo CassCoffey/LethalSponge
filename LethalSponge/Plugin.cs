@@ -1,7 +1,10 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
+using Scoops.compatibility;
 using Scoops.patches;
+using Scoops.service;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
@@ -17,6 +20,7 @@ public static class PluginInformation
 }
 
 [BepInPlugin(PluginInformation.PLUGIN_GUID, PluginInformation.PLUGIN_NAME, PluginInformation.PLUGIN_VERSION)]
+[BepInDependency("imabatby.lethallevelloader", BepInDependency.DependencyFlags.SoftDependency)]
 public class Plugin : BaseUnityPlugin
 {
     public static Plugin Instance { get; set; }
@@ -41,6 +45,20 @@ public class Plugin : BaseUnityPlugin
         Log.LogInfo($"Applying patches...");
         ApplyPluginPatch();
         Log.LogInfo($"Patches applied");
+
+        IEnumerable<AssetBundle> allBundles = AssetBundle.GetAllLoadedAssetBundles();
+        foreach (AssetBundle bundle in allBundles)
+        {
+            SpongeService.RegisterAssetBundle(bundle);
+        }
+
+        SceneManager.sceneLoaded += SpongeService.SceneLoaded;
+
+        if (LLLCompat.Enabled)
+        {
+            Log.LogInfo($"Lethal Level Loader compat enabled...");
+            LLLCompat.AddBundleHook();
+        }
     }
 
     /// <summary>
@@ -49,5 +67,7 @@ public class Plugin : BaseUnityPlugin
     private void ApplyPluginPatch()
     {
         _harmony.PatchAll(typeof(StartOfRoundSpongePatch));
+        _harmony.PatchAll(typeof(AssetBundleSpongePatch));
+        _harmony.PatchAll(typeof(AssetBundleAsyncSpongePatch));
     }
 }
