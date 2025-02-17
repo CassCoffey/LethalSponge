@@ -1,6 +1,9 @@
-﻿using HarmonyLib;
+﻿using BepInEx;
+using HarmonyLib;
+using LethalLevelLoader;
 using Mono.Cecil;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -86,7 +89,7 @@ namespace Scoops.service
             // Initial pass to build references
             for (int i = 0; i < allComponents.Length; i++)
             {
-                IncrementReferenceCounts(GetObjectReferences(i));
+                IncrementReferenceCounts(GetUnityObjectReferences(i));
             }
 
             // Additional pass for each object type with no references
@@ -170,7 +173,7 @@ namespace Scoops.service
 
             foreach (UnityEngine.Component component in obj.GetComponents(typeof(UnityEngine.Component)))
             {
-                BuildBundleDependencies(bundleName, GetObjectReferences(component));
+                BuildBundleDependencies(bundleName, GetUnityObjectReferences(component));
             }
 
             foreach (Transform child in obj.transform)
@@ -206,12 +209,11 @@ namespace Scoops.service
             // if we find a bundle, make sure it isn't on the blacklist
             if (!(bundleName != "unknown" && ignoredAssetbundles.Contains(bundle)))
             {
-                if (Config.performRemoval.Value) { UnityEngine.Object.Destroy(leakedObj); }
                 string leakedType = leakedObj.GetType().Name;
 
                 if (bundleName == "unknown")
                 {
-                    Plugin.Log.LogInfo("Object with no known bundle - " + leakedObj.name);
+                    Plugin.Log.LogInfo(leakedType + " with no known bundle - " + leakedObj.name);
                 }
 
                 if (leakTracking.ContainsKey(bundleName))
@@ -224,6 +226,8 @@ namespace Scoops.service
                     leakTracking.Add(bundleName, new BundleLeakTracker());
                     leakTracking[bundleName].leakCount.Add(leakedType, 1);
                 }
+
+                if (Config.performRemoval.Value) { UnityEngine.Object.Destroy(leakedObj); }
                 return true;
             }
 
@@ -233,15 +237,15 @@ namespace Scoops.service
         private static readonly Dictionary<Type, List<FieldInfo>> assignableFieldsByComponentType = new Dictionary<Type, List<FieldInfo>>() { { typeof(UnityEngine.Component), null } };
         private static readonly Dictionary<Type, List<PropertyInfo>> assignablePropertiesByComponentType = new Dictionary<Type, List<PropertyInfo>>() { { typeof(UnityEngine.Component), null } };
 
-        public static List<UnityEngine.Object> GetObjectReferences(int index)
+        public static List<UnityEngine.Object> GetUnityObjectReferences(int index)
         {
             var target = allComponents[index];
             if (target is not UnityEngine.Component) { return new List<UnityEngine.Object>(); }
 
-            return GetObjectReferences(target);
+            return GetUnityObjectReferences(target);
         }
 
-        public static List<UnityEngine.Object> GetObjectReferences(UnityEngine.Component target)
+        public static List<UnityEngine.Object> GetUnityObjectReferences(UnityEngine.Component target)
         {
             Type componentType = target.GetType();
 
@@ -315,6 +319,8 @@ namespace Scoops.service
             {
                 foreach (var field in assignableFields)
                 {
+                    if (field.FieldType is)
+
                     if (!(field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)) || field.FieldType == typeof(UnityEngine.Object))) { continue; }
 
                     UnityEngine.Object reference = field.GetValue(target) as UnityEngine.Object;
@@ -334,11 +340,25 @@ namespace Scoops.service
 
                     if (!property.CanRead || !(property.PropertyType.IsSubclassOf(typeof(UnityEngine.Object)) || property.PropertyType == typeof(UnityEngine.Object))) { continue; }
 
-                    UnityEngine.Object reference = null;
+                    List<UnityEngine.Object> references = new List<UnityEngine.Object>();
 
                     try
                     {
-                        reference = property.GetValue(target) as UnityEngine.Object;
+                        IEnumerable enumerable = property.GetValue(target) as IEnumerable;
+
+                        if (enumerable != null && !(enumerable is string))
+                        {
+                            foreach (var obj in enumerable)
+                            {
+                                UnityEngine.Object reference = obj as UnityEngine.Object;
+                                if (reference != null) references.Add(reference);
+                            }
+                        } 
+                        else
+                        {
+                            UnityEngine.Object reference = property.GetValue(target) as UnityEngine.Object;
+                            if (reference != null) references.Add(reference);
+                        }
                     }
                     catch (Exception e)
                     {
