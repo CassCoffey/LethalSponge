@@ -54,6 +54,8 @@ public class Plugin : BaseUnityPlugin
 
         SceneManager.sceneLoaded += SpongeService.SceneLoaded;
 
+        SpongeService.ParseConfig();
+
         if (LLLCompat.Enabled)
         {
             Log.LogInfo($"Lethal Level Loader compat enabled...");

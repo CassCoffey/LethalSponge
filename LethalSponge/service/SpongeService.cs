@@ -55,8 +55,6 @@ namespace Scoops.service
             Plugin.Log.LogInfo("---");
             Plugin.Log.LogInfo("Initializing Sponge");
 
-            ParseConfig();
-
             allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
             Plugin.Log.LogInfo("Initial count of " + allObjects.Length + " objects loaded.");
             prevCount = allObjects.Length;
@@ -68,7 +66,7 @@ namespace Scoops.service
             Plugin.Log.LogInfo("---");
         }
 
-        private static void ParseConfig()
+        public static void ParseConfig()
         {
             ignoredProperties.AddRange(Config.propertyBlacklist.Value.Split(';'));
             ignoredAssetbundles.AddRange(Config.assetbundleBlacklist.Value.Split(';'));
@@ -158,22 +156,28 @@ namespace Scoops.service
 
         public static void SceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (streamedSceneTracking.TryGetValue(scene.name, out string bundle))
+            streamedSceneTracking.TryGetValue(scene.name, out string bundle);
+
+            foreach (UnityEngine.GameObject obj in scene.GetRootGameObjects())
             {
-                foreach (UnityEngine.GameObject obj in scene.GetRootGameObjects())
-                {
-                    FindSceneDependenciesRecursively(bundle, obj);
-                }
+                FindSceneDependenciesRecursively(bundle ?? scene.name, obj);
             }
         }
 
         public static void FindSceneDependenciesRecursively(string bundleName, GameObject obj)
         {
+            if (obj.name == "SiloShortLowDetail")
+            {
+                Plugin.Log.LogInfo("We've found the silo");
+            }
             bundleTracking[obj.name] = bundleName;
 
             foreach (UnityEngine.Component component in obj.GetComponents(typeof(UnityEngine.Component)))
             {
-                BuildBundleDependencies(bundleName, GetUnityObjectReferences(component));
+                if (component != null)
+                {
+                    BuildBundleDependencies(bundleName, GetUnityObjectReferences(component));
+                }
             }
 
             foreach (Transform child in obj.transform)
@@ -213,7 +217,7 @@ namespace Scoops.service
 
                 if (bundleName == "unknown")
                 {
-                    Plugin.Log.LogInfo(leakedType + " with no known bundle - " + leakedObj.name);
+                    Plugin.Log.LogInfo(leakedType + " with no known bundle - " + leakedObj.name + ", ID - " + leakedObj.GetInstanceID());
                 }
 
                 if (leakTracking.ContainsKey(bundleName))
@@ -240,7 +244,7 @@ namespace Scoops.service
         public static List<UnityEngine.Object> GetUnityObjectReferences(int index)
         {
             var target = allComponents[index];
-            if (target is not UnityEngine.Component) { return new List<UnityEngine.Object>(); }
+            if (target == null || target is not UnityEngine.Component) { return new List<UnityEngine.Object>(); }
 
             return GetUnityObjectReferences(target);
         }
@@ -319,14 +323,23 @@ namespace Scoops.service
             {
                 foreach (var field in assignableFields)
                 {
-                    if (field.FieldType is)
+                    if (!(field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)) || field.FieldType == typeof(UnityEngine.Object) || 
+                        (field.FieldType.IsAssignableFrom(typeof(IEnumerable)) && field.FieldType != typeof(string)))) { continue; }
 
-                    if (!(field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)) || field.FieldType == typeof(UnityEngine.Object))) { continue; }
+                    IEnumerable enumerable = field.GetValue(target) as IEnumerable;
 
-                    UnityEngine.Object reference = field.GetValue(target) as UnityEngine.Object;
-                    if (reference != null)
+                    if (enumerable != null && !(enumerable is string))
                     {
-                        result.Add(reference);
+                        foreach (var obj in enumerable)
+                        {
+                            UnityEngine.Object reference = obj as UnityEngine.Object;
+                            if (reference != null) result.Add(reference);
+                        }
+                    }
+                    else
+                    {
+                        UnityEngine.Object reference = field.GetValue(target) as UnityEngine.Object;
+                        if (reference != null) result.Add(reference);
                     }
                 }
             }
@@ -338,7 +351,9 @@ namespace Scoops.service
                     string propertyId = property.DeclaringType.Name + "." + property.Name;
                     if (ignoredProperties.Contains(propertyId)) { continue; }
 
-                    if (!property.CanRead || !(property.PropertyType.IsSubclassOf(typeof(UnityEngine.Object)) || property.PropertyType == typeof(UnityEngine.Object))) { continue; }
+                    if (!property.CanRead || 
+                        !(property.PropertyType.IsSubclassOf(typeof(UnityEngine.Object)) || property.PropertyType == typeof(UnityEngine.Object) ||
+                        (property.PropertyType.IsAssignableFrom(typeof(IEnumerable)) && property.PropertyType != typeof(string)))) { continue; }
 
                     List<UnityEngine.Object> references = new List<UnityEngine.Object>();
 
@@ -351,13 +366,33 @@ namespace Scoops.service
                             foreach (var obj in enumerable)
                             {
                                 UnityEngine.Object reference = obj as UnityEngine.Object;
-                                if (reference != null) references.Add(reference);
+                                if (reference != null)
+                                {
+                                    if (Config.verboseLogging.Value && !allObjects.Contains(reference))
+                                    {
+                                        Plugin.Log.LogWarning("Calling " + propertyId + " created a new object: " + reference.name);
+
+                                        ignoredProperties.AddItem(propertyId);
+                                    }
+
+                                    result.Add(reference);
+                                }
                             }
                         } 
                         else
                         {
                             UnityEngine.Object reference = property.GetValue(target) as UnityEngine.Object;
-                            if (reference != null) references.Add(reference);
+                            if (reference != null)
+                            {
+                                if (Config.verboseLogging.Value && !allObjects.Contains(reference))
+                                {
+                                    Plugin.Log.LogWarning("Calling " + propertyId + " created a new object: " + reference.name);
+
+                                    ignoredProperties.AddItem(propertyId);
+                                }
+
+                                result.Add(reference);
+                            }
                         }
                     }
                     catch (Exception e)
@@ -368,18 +403,6 @@ namespace Scoops.service
                         ignoredProperties.AddItem(propertyId);
 
                         continue;
-                    }
-                    
-                    if (reference != null)
-                    {
-                        if (Config.verboseLogging.Value && !allObjects.Contains(reference))
-                        {
-                            Plugin.Log.LogWarning("Calling " + propertyId + " created a new object: " + reference.name);
-
-                            ignoredProperties.AddItem(propertyId);
-                        }
-
-                        result.Add(reference);
                     }
                 }
             }
@@ -393,7 +416,7 @@ namespace Scoops.service
             {
                 int refID = reference.GetInstanceID();
                 referenceTracking.TryGetValue(refID, out ushort currentCount);
-                referenceTracking[refID] = currentCount++;
+                referenceTracking[refID] = (ushort)(currentCount + 1);
             }
         }
 
