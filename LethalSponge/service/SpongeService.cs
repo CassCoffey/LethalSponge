@@ -1,16 +1,22 @@
 ﻿using BepInEx;
+using DunGen;
+using DunGen.Graph;
 using HarmonyLib;
 using LethalLevelLoader;
 using Mono.Cecil;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
+using System.Xml.Linq;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.InputSystem.HID;
 using UnityEngine.SceneManagement;
 
 namespace Scoops.service
@@ -166,13 +172,33 @@ namespace Scoops.service
 
             foreach (UnityEngine.GameObject obj in scene.GetRootGameObjects())
             {
-                FindSceneDependenciesRecursively(bundle ?? scene.name, obj);
+                FindGameObjectDependenciesRecursively(bundle ?? scene.name, obj);
             }
         }
 
-        public static void FindSceneDependenciesRecursively(string bundleName, GameObject obj)
+        public static void DungeonLoaded(DungeonGenerator generator)
         {
-            bundleTracking[obj.name] = bundleName;
+            bundleTracking.TryGetValue(generator.DungeonFlow.name, out string bundle);
+
+            FindGameObjectDependenciesRecursively(bundle ?? generator.DungeonFlow.name, generator.Root);
+        }
+
+        public static void ObjectLoaded(AssetBundle bundle, UnityEngine.Object obj)
+        {
+            GameObject gameObject = obj as GameObject;
+            if (gameObject != null)
+            {
+                FindGameObjectDependenciesRecursively(bundle.name, gameObject);
+            }
+            else
+            {
+                bundleTracking[obj.name.ToLower()] = bundle.name;
+            }
+        }
+
+        public static void FindGameObjectDependenciesRecursively(string bundleName, GameObject obj)
+        {
+            bundleTracking[obj.name.ToLower()] = bundleName;
 
             foreach (UnityEngine.Component component in obj.GetComponents(typeof(UnityEngine.Component)))
             {
@@ -184,7 +210,7 @@ namespace Scoops.service
 
             foreach (Transform child in obj.transform)
             {
-                FindSceneDependenciesRecursively(bundleName, child.gameObject);
+                FindGameObjectDependenciesRecursively(bundleName, child.gameObject);
             }
         }
 
@@ -204,6 +230,38 @@ namespace Scoops.service
                 {
                     string assetName = Path.GetFileNameWithoutExtension(assetPath).ToLower();
                     bundleTracking.TryAdd(assetName, bundle.name);
+                }
+            }
+        }
+
+        public static IEnumerator RegisterAssetBundleStale(AssetBundle bundle)
+        {
+            // Delay to catch objects that are still instantiating
+            yield return new WaitForSeconds(1.5f);
+
+            GameObject[] allGameObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+
+            if (bundle.isStreamedSceneAssetBundle)
+            {
+                foreach (string scenePath in bundle.GetAllScenePaths())
+                {
+                    string sceneName = Path.GetFileNameWithoutExtension(scenePath);
+                    streamedSceneTracking.TryAdd(sceneName, bundle.name);
+                }
+            }
+            else
+            {
+                foreach (string assetPath in bundle.GetAllAssetNames())
+                {
+                    string assetName = Path.GetFileNameWithoutExtension(assetPath).ToLower();
+                    bundleTracking.TryAdd(assetName, bundle.name);
+
+                    GameObject existingObj = allGameObjects.Where(x => x.name.ToLower() == assetName).FirstOrDefault<GameObject>();
+
+                    if (existingObj != default(GameObject))
+                    {
+                        FindGameObjectDependenciesRecursively(bundle.name, existingObj);
+                    }
                 }
             }
         }
@@ -254,6 +312,8 @@ namespace Scoops.service
             Type objectType = target.GetType();
 
             List<UnityEngine.Object> result = new List<UnityEngine.Object>();
+
+            if (target.GetType() == typeof(Camera)) { return result; }
 
             if (!assignableFieldsByObjectType.TryGetValue(objectType, out var assignableFields))
             {
@@ -364,7 +424,7 @@ namespace Scoops.service
                     if (target is Material)
                     {
                         Material mat = (Material)target;
-                        if (!mat.HasProperty("_MainTex"))
+                        if (!mat.HasProperty("_MainTex") && property.Name == "mainTexture")
                         {
                             continue;
                         }
@@ -428,6 +488,17 @@ namespace Scoops.service
                 }
             }
 
+            // Need to account for materials having many textures.
+            if (target is Material)
+            {
+                Material mat = (Material)target;
+                foreach (string texName in mat.GetTexturePropertyNames())
+                {
+                    Texture tex = mat.GetTexture(texName);
+                    if (tex != null) result.Add(tex);
+                }
+            }
+
             return result;
         }
 
@@ -445,7 +516,11 @@ namespace Scoops.service
         {
             foreach (UnityEngine.Object reference in references)
             {
-                bundleTracking[reference.name] = bundleName;
+                if (!bundleTracking.ContainsKey(reference.name.ToLower()))
+                {
+                    bundleTracking[reference.name.ToLower()] = bundleName;
+                    BuildBundleDependencies(bundleName, GetUnityObjectReferences(reference));
+                }
             }
         }
     }

@@ -3,6 +3,7 @@ using Scoops.service;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
@@ -59,7 +60,86 @@ namespace Scoops.patches
                     SpongeService.RegisterAssetBundle(((AssetBundleCreateRequest)asyncOperation).assetBundle);
                 };
             }
-            
+        }
+    }
+
+    [HarmonyPatch]
+    public class AssetBundleLoadSpongePatch
+    {
+        static IEnumerable<MethodBase> TargetMethods() => AccessTools.GetDeclaredMethods(typeof(AssetBundle)).Where(x => x.Name.Equals("LoadAsset")).Where(x => !x.IsGenericMethod);
+
+        static void Postfix(ref AssetBundle __instance, ref UnityEngine.Object __result)
+        {
+            SpongeService.ObjectLoaded(__instance, __result);
+        }
+    }
+
+    [HarmonyPatch]
+    public class AssetBundleLoadAsyncSpongePatch
+    {
+        static IEnumerable<MethodBase> TargetMethods() => AccessTools.GetDeclaredMethods(typeof(AssetBundle)).Where(x => x.Name.Equals("LoadAssetAsync")).Where(x => !x.IsGenericMethod);
+
+        static void Postfix(ref AssetBundle __instance, ref AssetBundleRequest __result)
+        {
+            AssetBundle bundle = __instance;
+
+            if (__result.isDone)
+            {
+                SpongeService.ObjectLoaded(bundle, __result.asset);
+            }
+            else
+            {
+                __result.completed += (asyncOperation) =>
+                {
+                    SpongeService.ObjectLoaded(bundle, ((AssetBundleRequest)asyncOperation).asset);
+                };
+            }
+        }
+    }
+
+    [HarmonyPatch]
+    public class AssetBundleLoadMultipleSpongePatch
+    {
+        static IEnumerable<MethodBase> TargetMethods() => AccessTools.GetDeclaredMethods(typeof(AssetBundle)).Where(x => x.Name.Equals("LoadAllAssets") || x.Name.Equals("LoadAssetWithSubAssets")).Where(x => !x.IsGenericMethod);
+
+        static void Postfix(ref AssetBundle __instance, ref UnityEngine.Object[] __result)
+        {
+            if (__result != null)
+            {
+                foreach (UnityEngine.Object obj in __result)
+                {
+                    SpongeService.ObjectLoaded(__instance, obj);
+                }
+            }
+        }
+    }
+
+    [HarmonyPatch]
+    public class AssetBundleLoadMultipleAsyncSpongePatch
+    {
+        static IEnumerable<MethodBase> TargetMethods() => AccessTools.GetDeclaredMethods(typeof(AssetBundle)).Where(x => x.Name.Equals("LoadAllAssetsAsync") || x.Name.Equals("LoadAssetWithSubAssetsAsync")).Where(x => !x.IsGenericMethod);
+
+        static void Postfix(ref AssetBundle __instance, ref AssetBundleRequest __result)
+        {
+            AssetBundle bundle = __instance;
+
+            if (__result.isDone)
+            {
+                foreach (UnityEngine.Object obj in __result.allAssets)
+                {
+                    SpongeService.ObjectLoaded(bundle, obj);
+                }
+            }
+            else
+            {
+                __result.completed += (asyncOperation) =>
+                {
+                    foreach (UnityEngine.Object obj in ((AssetBundleRequest)asyncOperation).allAssets)
+                    {
+                        SpongeService.ObjectLoaded(bundle, obj);
+                    }
+                };
+            }
         }
     }
 }

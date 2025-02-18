@@ -46,15 +46,15 @@ public class Plugin : BaseUnityPlugin
         ApplyPluginPatch();
         Log.LogInfo($"Patches applied");
 
+        SpongeService.ParseConfig();
+
         IEnumerable<AssetBundle> allBundles = AssetBundle.GetAllLoadedAssetBundles();
         foreach (AssetBundle bundle in allBundles)
         {
-            SpongeService.RegisterAssetBundle(bundle);
+            StartCoroutine(SpongeService.RegisterAssetBundleStale(bundle));
         }
 
         SceneManager.sceneLoaded += SpongeService.SceneLoaded;
-
-        SpongeService.ParseConfig();
 
         if (LLLCompat.Enabled)
         {
@@ -69,7 +69,12 @@ public class Plugin : BaseUnityPlugin
     private void ApplyPluginPatch()
     {
         _harmony.PatchAll(typeof(StartOfRoundSpongePatch));
+        _harmony.PatchAll(typeof(RoundManagerSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleAsyncSpongePatch));
+        _harmony.PatchAll(typeof(AssetBundleLoadSpongePatch));
+        _harmony.PatchAll(typeof(AssetBundleLoadAsyncSpongePatch));
+        _harmony.PatchAll(typeof(AssetBundleLoadMultipleSpongePatch));
+        _harmony.PatchAll(typeof(AssetBundleLoadMultipleAsyncSpongePatch));
     }
 }
