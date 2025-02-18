@@ -16,6 +16,7 @@ using Unity.Properties;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using UnityEngine.UIElements;
 
 namespace Scoops.service
@@ -32,6 +33,10 @@ namespace Scoops.service
 
     internal static class SpongeService
     {
+
+        private static readonly Dictionary<Type, List<FieldInfo>> assignableFieldsByComponentType = new Dictionary<Type, List<FieldInfo>>() { { typeof(UnityEngine.Component), null } };
+        private static readonly Dictionary<Type, List<PropertyInfo>> assignablePropertiesByComponentType = new Dictionary<Type, List<PropertyInfo>>() { { typeof(UnityEngine.Component), null } };
+
         private static UnityEngine.Object[] allObjects;
         private static UnityEngine.Component[] allComponents;
 
@@ -119,7 +124,7 @@ namespace Scoops.service
                 }
                 else
                 {
-                    Plugin.Log.LogInfo("For unknown AssetBundle sources: ");
+                    Plugin.Log.LogInfo("For Base Game/unknown AssetBundle sources: ");
                 }
                 foreach (string assetType in tracker.leakCount.Keys)
                 {
@@ -166,10 +171,6 @@ namespace Scoops.service
 
         public static void FindSceneDependenciesRecursively(string bundleName, GameObject obj)
         {
-            if (obj.name == "SiloShortLowDetail")
-            {
-                Plugin.Log.LogInfo("We've found the silo");
-            }
             bundleTracking[obj.name] = bundleName;
 
             foreach (UnityEngine.Component component in obj.GetComponents(typeof(UnityEngine.Component)))
@@ -238,9 +239,6 @@ namespace Scoops.service
             return false;
         }
 
-        private static readonly Dictionary<Type, List<FieldInfo>> assignableFieldsByComponentType = new Dictionary<Type, List<FieldInfo>>() { { typeof(UnityEngine.Component), null } };
-        private static readonly Dictionary<Type, List<PropertyInfo>> assignablePropertiesByComponentType = new Dictionary<Type, List<PropertyInfo>>() { { typeof(UnityEngine.Component), null } };
-
         public static List<UnityEngine.Object> GetUnityObjectReferences(int index)
         {
             var target = allComponents[index];
@@ -278,6 +276,7 @@ namespace Scoops.service
                         break;
                     }
 
+                    assignableFields ??= new List<FieldInfo>();
                     assignableFields.AddRange(assignableFieldsFromBaseTypes);
 
                     break;
@@ -310,6 +309,7 @@ namespace Scoops.service
                         break;
                     }
 
+                    assignableProperties ??= new List<PropertyInfo>();
                     assignableProperties.AddRange(assignablePropertiesFromBaseTypes);
 
                     break;
