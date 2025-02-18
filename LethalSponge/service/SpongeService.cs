@@ -21,7 +21,7 @@ using UnityEngine.SceneManagement;
 
 namespace Scoops.service
 {
-    internal class BundleLeakTracker
+    internal struct BundleLeakTracker
     {
         public Dictionary<string, int> leakCount;
 
@@ -44,6 +44,7 @@ namespace Scoops.service
         private static List<String> ignoredAssetbundles = new List<string>();
 
         private static Dictionary<string, BundleLeakTracker> leakTracking = new Dictionary<string, BundleLeakTracker>();
+        private static Dictionary<string, BundleLeakTracker> previousLeakTracking = new Dictionary<string, BundleLeakTracker>();
         private static Dictionary<int, ushort> referenceTracking = new Dictionary<int, ushort>();
         private static Dictionary<string, string> bundleTracking = new Dictionary<string, string>();
         private static Dictionary<string, string> streamedSceneTracking = new Dictionary<string, string>();
@@ -57,17 +58,17 @@ namespace Scoops.service
 
         public static void Initialize()
         {
-            Plugin.Log.LogInfo("---");
-            Plugin.Log.LogInfo("Initializing Sponge");
+            Plugin.Log.LogMessage("---");
+            Plugin.Log.LogMessage("Initializing Sponge");
 
             allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
-            Plugin.Log.LogInfo("Initial count of " + allObjects.Length + " objects loaded.");
+            Plugin.Log.LogMessage("Initial count of " + allObjects.Length + " objects loaded.");
             prevCount = allObjects.Length;
             initialCount = allObjects.Length;
             allObjects = [];
 
-            Plugin.Log.LogInfo("Sponge Initialised.");
-            Plugin.Log.LogInfo("---");
+            Plugin.Log.LogMessage("Sponge Initialised.");
+            Plugin.Log.LogMessage("---");
         }
 
         public static void ParseConfig()
@@ -76,17 +77,44 @@ namespace Scoops.service
             ignoredAssetbundles.AddRange(Config.assetbundleBlacklist.Value.Split(';'));
         }
 
-        public static void PerformCleanup()
+        public static void ApplySponge()
         {
-            Plugin.Log.LogInfo("---");
-            Plugin.Log.LogInfo("Applying Sponge");
+            Plugin.Log.LogMessage("---");
+            Plugin.Log.LogMessage("Applying Sponge");
             stopwatch.Restart();
 
-            allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
-            Plugin.Log.LogInfo("Last check there were " + prevCount + " objects loaded, now there are " + allObjects.Length);
+            if (Config.verboseLogging.Value)
+            {
+                PerformEvaluation();
+            }
+            int newCount = Resources.FindObjectsOfTypeAll<UnityEngine.Object>().Length;
+            if (Config.verboseLogging.Value && newCount > allObjects.Length)
+            {
+                Plugin.Log.LogMessage("There are now " + newCount + " objects.");
+                Plugin.Log.LogWarning("More objects after checking than before. Property calls possibly instantiated unexpected objects.");
+            }
 
+            stopwatch.Stop();
+            TimeSpan elapsedTime = stopwatch.Elapsed;
+            int initialChange = newCount - initialCount;
+            float initialPercentChange = ((float)initialChange / (float)initialCount) * 100f;
+            int prevChange = newCount - prevCount;
+            float prevPercentChange = ((float)prevChange / (float)prevCount) * 100f;
+
+            Plugin.Log.LogMessage("Sponge took " + elapsedTime.TotalSeconds + " seconds to execute.");
+            Plugin.Log.LogMessage("There are " + initialChange + " more objects than on initialization, a " + initialPercentChange + "% change.");
+            Plugin.Log.LogMessage("There are " + prevChange + " more objects than last check, a " + prevPercentChange + "% change.");
+            Plugin.Log.LogMessage("---");
+
+            prevCount = newCount;
+        }
+
+        public static void PerformEvaluation()
+        {
+            allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
             referenceTracking.Clear();
-            leakTracking.Clear();
+            previousLeakTracking = leakTracking;
+            leakTracking = new Dictionary<string, BundleLeakTracker>();
 
             // Initial pass to build references
             for (int i = 0; i < allObjects.Length; i++)
@@ -101,66 +129,54 @@ namespace Scoops.service
             int audioNoRefCount = ExamineType<AudioClip>();
             int navMeshNoRefCount = ExamineType<NavMeshData>();
 
-            int newCount = Resources.FindObjectsOfTypeAll<UnityEngine.Object>().Length;
-            if (Config.performRemoval.Value)
-            {
-                newCount -= meshNoRefCount;
-            }
-            Plugin.Log.LogInfo("Changed to " + newCount + " objects.");
-
-            if (newCount > allObjects.Length)
-            {
-                Plugin.Log.LogWarning("More objects after cleanup than before. Property calls possibly instantiated unexpected objects.");
-            }
-
-            prevCount = newCount;
             allObjects = [];
 
             foreach (string bundleName in leakTracking.Keys)
             {
-                BundleLeakTracker tracker = leakTracking[bundleName];
                 if (bundleName != "unknown")
                 {
-                    Plugin.Log.LogInfo("For AssetBundle " + bundleName + ": ");
+                    Plugin.Log.LogMessage("For AssetBundle " + bundleName + ": ");
                 }
                 else
                 {
-                    Plugin.Log.LogInfo("For Base Game/unknown AssetBundle sources: ");
+                    Plugin.Log.LogMessage("For Base Game/unknown AssetBundle sources: ");
                 }
+                BundleLeakTracker tracker = leakTracking[bundleName];
                 foreach (string assetType in tracker.leakCount.Keys)
                 {
-                    Plugin.Log.LogInfo(" - " + tracker.leakCount[assetType] + " leaked " + assetType + ".");
+                    int newLeakCount = tracker.leakCount[assetType];
+                    Plugin.Log.LogMessage(" - " + newLeakCount + " " + assetType + " with no native unity references.");
+                    if (previousLeakTracking.TryGetValue(bundleName, out BundleLeakTracker previousTracker))
+                    {
+                        int prevLeakCount = previousTracker.leakCount[assetType];
+                        if (newLeakCount > prevLeakCount)
+                        {
+                            Plugin.Log.LogMessage("   - " + (newLeakCount - prevLeakCount) + " more than last check.");
+                        }
+                    }
                 }
             }
-
-            stopwatch.Stop();
-            TimeSpan elapsedTime = stopwatch.Elapsed;
-            int change = newCount - initialCount;
-            float percentChange = ((float)change / (float)initialCount) * 100f;
-            Plugin.Log.LogInfo("Sponge took " + elapsedTime.TotalSeconds + " seconds to execute.");
-            Plugin.Log.LogInfo("There are " + change + " more objects than on initialization, a " + percentChange + "% change.");
-            Plugin.Log.LogInfo("---");
         }
 
         private static int ExamineType<T>() where T : UnityEngine.Object
         {
             int noRefCount = 0;
 
-            T[] allObjects = Resources.FindObjectsOfTypeAll<T>();
-            for (int i = 0; i < allObjects.Length; i++)
+            T[] allType = Resources.FindObjectsOfTypeAll<T>();
+            for (int i = 0; i < allType.Length; i++)
             {
-                int instanceID = allObjects[i].GetInstanceID();
+                int instanceID = allType[i].GetInstanceID();
                 if (!referenceTracking.TryGetValue(instanceID, out ushort refs) || refs < 1)
                 {
-                    if (HandleLeakedObject(allObjects[i])) { noRefCount++; }
+                    if (HandleLeakedObject(allType[i])) { noRefCount++; }
                 }
             }
 
-            allObjects = [];
+            allType = [];
 
             if (noRefCount > 0)
             {
-                Plugin.Log.LogInfo("Found " + noRefCount + " " + typeof(T).Name + " with no references.");
+                Plugin.Log.LogMessage("Found " + noRefCount + " " + typeof(T).Name + " with no known references.");
             }
 
             return noRefCount;
@@ -186,9 +202,14 @@ namespace Scoops.service
         public static void ObjectLoaded(AssetBundle bundle, UnityEngine.Object obj)
         {
             GameObject gameObject = obj as GameObject;
+            UnityEngine.Component component = obj as UnityEngine.Component;
             if (gameObject != null)
             {
                 FindGameObjectDependenciesRecursively(bundle.name, gameObject);
+            }
+            else if (component != null)
+            {
+                BuildBundleDependencies(bundle.name, GetUnityObjectReferences(component));
             }
             else
             {
@@ -272,14 +293,9 @@ namespace Scoops.service
             bundleTracking.TryGetValue(baseName, out string bundle);
             string bundleName = bundle ?? "unknown";
             // if we find a bundle, make sure it isn't on the blacklist
-            if (!(bundleName != "unknown" && ignoredAssetbundles.Contains(bundle)))
+            if (!ignoredAssetbundles.Contains(bundle))
             {
                 string leakedType = leakedObj.GetType().Name;
-
-                if (bundleName == "unknown")
-                {
-                    Plugin.Log.LogInfo(leakedType + " with no known bundle - " + baseName + ", ID - " + leakedObj.GetInstanceID());
-                }
 
                 if (leakTracking.ContainsKey(bundleName))
                 {
@@ -292,7 +308,6 @@ namespace Scoops.service
                     leakTracking[bundleName].leakCount.Add(leakedType, 1);
                 }
 
-                if (Config.performRemoval.Value) { UnityEngine.Object.Destroy(leakedObj); }
                 return true;
             }
 
@@ -451,13 +466,6 @@ namespace Scoops.service
                                 UnityEngine.Object reference = obj as UnityEngine.Object;
                                 if (reference != null)
                                 {
-                                    if (Config.verboseLogging.Value && !allObjects.Contains(reference))
-                                    {
-                                        Plugin.Log.LogWarning("Calling " + propertyId + " created a new object: " + reference.name);
-
-                                        ignoredProperties.AddItem(propertyId);
-                                    }
-
                                     result.Add(reference);
                                 }
                             }
@@ -467,13 +475,6 @@ namespace Scoops.service
                             UnityEngine.Object reference = property.GetValue(target) as UnityEngine.Object;
                             if (reference != null)
                             {
-                                if (Config.verboseLogging.Value && !allObjects.Contains(reference))
-                                {
-                                    Plugin.Log.LogWarning("Calling " + propertyId + " created a new object: " + reference.name);
-
-                                    ignoredProperties.AddItem(propertyId);
-                                }
-
                                 result.Add(reference);
                             }
                         }

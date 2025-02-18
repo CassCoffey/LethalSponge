@@ -21,7 +21,7 @@ namespace Scoops.patches
         [HarmonyPostfix]
         private static void StartOfRound_PassTimeToNextDay(ref StartOfRound __instance)
         {
-            SpongeService.PerformCleanup();
+            SpongeService.ApplySponge();
         }
     }
 }
