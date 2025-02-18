@@ -202,7 +202,7 @@ namespace Scoops.service
             {
                 foreach (string assetPath in bundle.GetAllAssetNames())
                 {
-                    string assetName = Path.GetFileNameWithoutExtension(assetPath);
+                    string assetName = Path.GetFileNameWithoutExtension(assetPath).ToLower();
                     bundleTracking.TryAdd(assetName, bundle.name);
                 }
             }
@@ -210,7 +210,7 @@ namespace Scoops.service
 
         private static bool HandleLeakedObject(UnityEngine.Object leakedObj)
         {
-            string baseName = leakedObj.name.Replace(" (Instance)", "");
+            string baseName = leakedObj.name.Replace(" (Instance)", "").ToLower();
             bundleTracking.TryGetValue(baseName, out string bundle);
             string bundleName = bundle ?? "unknown";
             // if we find a bundle, make sure it isn't on the blacklist
@@ -220,7 +220,7 @@ namespace Scoops.service
 
                 if (bundleName == "unknown")
                 {
-                    Plugin.Log.LogInfo(leakedType + " with no known bundle - " + leakedObj.name + ", ID - " + leakedObj.GetInstanceID());
+                    Plugin.Log.LogInfo(leakedType + " with no known bundle - " + baseName + ", ID - " + leakedObj.GetInstanceID());
                 }
 
                 if (leakTracking.ContainsKey(bundleName))
@@ -370,26 +370,15 @@ namespace Scoops.service
                         }
                     }
 
-                    // Need to account for meshes with read/write disabled or we'll throw errors.
+                    // Need to account for meshes or we'll throw errors.
                     if (target is Mesh)
                     {
                         Mesh mesh = (Mesh)target;
-                        if (!mesh.isReadable && meshReadProperties.Contains(property.Name))
+                        if (meshReadProperties.Contains(property.Name))
                         {
                             continue;
                         }
                     }
-
-                    if (property.Name == "fontSharedMaterials")
-                    {
-                        Mesh mesh = (Mesh)target;
-                        if (!mesh.isReadable && meshReadProperties.Contains(property.Name))
-                        {
-                            continue;
-                        }
-                    }
-
-                    List<UnityEngine.Object> references = new List<UnityEngine.Object>();
 
                     try
                     {
