@@ -43,8 +43,8 @@
       <Reference Publicize="True" Include="LethalLevelLoader">
         <HintPath>..\..\..\Stuff\Modding\Lethal Company\LLL\LethalLevelLoader.dll</HintPath>
       </Reference>
-      <Reference Include="UnityEngine.UI">
-        <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Reference Include="Unity.TextMeshPro">
+        <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.TextMeshPro.dll</HintPath>
       </Reference>
     </ItemGroup>
 

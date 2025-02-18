@@ -5,19 +5,13 @@ using Mono.Cecil;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Unity.Profiling.Memory;
-using Unity.Properties;
-using UnityEditor;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
-using UnityEngine.UIElements;
 
 namespace Scoops.service
 {
@@ -33,12 +27,10 @@ namespace Scoops.service
 
     internal static class SpongeService
     {
-
-        private static readonly Dictionary<Type, List<FieldInfo>> assignableFieldsByComponentType = new Dictionary<Type, List<FieldInfo>>() { { typeof(UnityEngine.Component), null } };
-        private static readonly Dictionary<Type, List<PropertyInfo>> assignablePropertiesByComponentType = new Dictionary<Type, List<PropertyInfo>>() { { typeof(UnityEngine.Component), null } };
+        private static readonly Dictionary<Type, List<FieldInfo>> assignableFieldsByObjectType = new Dictionary<Type, List<FieldInfo>>() { { typeof(UnityEngine.Object), null } };
+        private static readonly Dictionary<Type, List<PropertyInfo>> assignablePropertiesByObjectType = new Dictionary<Type, List<PropertyInfo>>() { { typeof(UnityEngine.Object), null } };
 
         private static UnityEngine.Object[] allObjects;
-        private static UnityEngine.Component[] allComponents;
 
         // List of known Getters that will create new objects or problems (Unity whyyyy)
         private static List<String> ignoredProperties = new List<string>();
@@ -55,6 +47,8 @@ namespace Scoops.service
         private static int prevCount = 0;
         private static int initialCount = 0;
 
+        private static readonly List<string> meshReadProperties = new List<string>() { "vertices", "normals", "tangents", "uv", "uv2", "uv3", "uv4", "uv5", "uv6", "uv7", "uv8", "colors", "colors32", "triangles" };
+
         public static void Initialize()
         {
             Plugin.Log.LogInfo("---");
@@ -65,7 +59,6 @@ namespace Scoops.service
             prevCount = allObjects.Length;
             initialCount = allObjects.Length;
             allObjects = [];
-            allComponents = [];
 
             Plugin.Log.LogInfo("Sponge Initialised.");
             Plugin.Log.LogInfo("---");
@@ -86,18 +79,21 @@ namespace Scoops.service
             allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
             Plugin.Log.LogInfo("Last check there were " + prevCount + " objects loaded, now there are " + allObjects.Length);
 
-            allComponents = Resources.FindObjectsOfTypeAll<UnityEngine.Component>();
             referenceTracking.Clear();
+            leakTracking.Clear();
 
             // Initial pass to build references
-            for (int i = 0; i < allComponents.Length; i++)
+            for (int i = 0; i < allObjects.Length; i++)
             {
                 IncrementReferenceCounts(GetUnityObjectReferences(i));
             }
 
-            // Additional pass for each object type with no references
-            int meshNoRefCount = ExamineMeshes();
-            Plugin.Log.LogInfo("Found " + meshNoRefCount + " meshes with no references.");
+            // Pass for each object type with no references
+            int meshNoRefCount = ExamineType<Mesh>();
+            int matNoRefCount = ExamineType<Material>();
+            int texNoRefCount = ExamineType<Texture2D>();
+            int audioNoRefCount = ExamineType<AudioClip>();
+            int navMeshNoRefCount = ExamineType<NavMeshData>();
 
             int newCount = Resources.FindObjectsOfTypeAll<UnityEngine.Object>().Length;
             if (Config.performRemoval.Value)
@@ -108,12 +104,11 @@ namespace Scoops.service
 
             if (newCount > allObjects.Length)
             {
-                Plugin.Log.LogWarning("More objects after cleanup than before. Property calls likely instantiated unexpected objects.");
+                Plugin.Log.LogWarning("More objects after cleanup than before. Property calls possibly instantiated unexpected objects.");
             }
 
             prevCount = newCount;
             allObjects = [];
-            allComponents = [];
 
             foreach (string bundleName in leakTracking.Keys)
             {
@@ -141,21 +136,27 @@ namespace Scoops.service
             Plugin.Log.LogInfo("---");
         }
 
-        private static int ExamineMeshes()
+        private static int ExamineType<T>() where T : UnityEngine.Object
         {
             int noRefCount = 0;
 
-            Mesh[] allMeshes = Resources.FindObjectsOfTypeAll<Mesh>();
-            for (int i = 0; i < allMeshes.Length; i++)
+            T[] allObjects = Resources.FindObjectsOfTypeAll<T>();
+            for (int i = 0; i < allObjects.Length; i++)
             {
-                int instanceID = allMeshes[i].GetInstanceID();
+                int instanceID = allObjects[i].GetInstanceID();
                 if (!referenceTracking.TryGetValue(instanceID, out ushort refs) || refs < 1)
                 {
-                    if (HandleLeakedObject(allMeshes[i])) { noRefCount++; }
+                    if (HandleLeakedObject(allObjects[i])) { noRefCount++; }
                 }
             }
 
-            allMeshes = [];
+            allObjects = [];
+
+            if (noRefCount > 0)
+            {
+                Plugin.Log.LogInfo("Found " + noRefCount + " " + typeof(T).Name + " with no references.");
+            }
+
             return noRefCount;
         }
 
@@ -209,7 +210,8 @@ namespace Scoops.service
 
         private static bool HandleLeakedObject(UnityEngine.Object leakedObj)
         {
-            bundleTracking.TryGetValue(leakedObj.name, out string bundle);
+            string baseName = leakedObj.name.Replace(" (Instance)", "");
+            bundleTracking.TryGetValue(baseName, out string bundle);
             string bundleName = bundle ?? "unknown";
             // if we find a bundle, make sure it isn't on the blacklist
             if (!(bundleName != "unknown" && ignoredAssetbundles.Contains(bundle)))
@@ -241,24 +243,24 @@ namespace Scoops.service
 
         public static List<UnityEngine.Object> GetUnityObjectReferences(int index)
         {
-            var target = allComponents[index];
-            if (target == null || target is not UnityEngine.Component) { return new List<UnityEngine.Object>(); }
+            var target = allObjects[index];
+            if (target == null || target is not UnityEngine.Object) { return new List<UnityEngine.Object>(); }
 
             return GetUnityObjectReferences(target);
         }
 
-        public static List<UnityEngine.Object> GetUnityObjectReferences(UnityEngine.Component target)
+        public static List<UnityEngine.Object> GetUnityObjectReferences(UnityEngine.Object target)
         {
-            Type componentType = target.GetType();
+            Type objectType = target.GetType();
 
             List<UnityEngine.Object> result = new List<UnityEngine.Object>();
 
-            if (!assignableFieldsByComponentType.TryGetValue(componentType, out var assignableFields))
+            if (!assignableFieldsByObjectType.TryGetValue(objectType, out var assignableFields))
             {
-                var type = componentType;
+                var type = objectType;
                 do
                 {
-                    const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+                    const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
                     foreach (var field in type.GetFields(flags))
                     {
                         assignableFields ??= new List<FieldInfo>();
@@ -266,7 +268,7 @@ namespace Scoops.service
                     }
 
                     type = type.BaseType;
-                    if (!assignableFieldsByComponentType.TryGetValue(type, out var assignableFieldsFromBaseTypes))
+                    if (!assignableFieldsByObjectType.TryGetValue(type, out var assignableFieldsFromBaseTypes))
                     {
                         continue;
                     }
@@ -283,15 +285,15 @@ namespace Scoops.service
                 }
                 while (true);
 
-                assignableFieldsByComponentType.Add(componentType, assignableFields);
+                assignableFieldsByObjectType.Add(objectType, assignableFields);
             }
 
-            if (!assignablePropertiesByComponentType.TryGetValue(componentType, out var assignableProperties))
+            if (!assignablePropertiesByObjectType.TryGetValue(objectType, out var assignableProperties))
             {
-                var type = componentType;
+                var type = objectType;
                 do
                 {
-                    const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+                    const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
                     foreach (var property in type.GetProperties(flags))
                     {
                         assignableProperties ??= new List<PropertyInfo>();
@@ -299,7 +301,7 @@ namespace Scoops.service
                     }
 
                     type = type.BaseType;
-                    if (!assignablePropertiesByComponentType.TryGetValue(type, out var assignablePropertiesFromBaseTypes))
+                    if (!assignablePropertiesByObjectType.TryGetValue(type, out var assignablePropertiesFromBaseTypes))
                     {
                         continue;
                     }
@@ -316,7 +318,7 @@ namespace Scoops.service
                 }
                 while (true);
 
-                assignablePropertiesByComponentType.Add(componentType, assignableProperties);
+                assignablePropertiesByObjectType.Add(objectType, assignableProperties);
             }
 
             if (assignableFields is not null)
@@ -324,7 +326,7 @@ namespace Scoops.service
                 foreach (var field in assignableFields)
                 {
                     if (!(field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)) || field.FieldType == typeof(UnityEngine.Object) || 
-                        (field.FieldType.IsAssignableFrom(typeof(IEnumerable)) && field.FieldType != typeof(string)))) { continue; }
+                        (typeof(IEnumerable).IsAssignableFrom(field.FieldType) && field.FieldType != typeof(string)))) { continue; }
 
                     IEnumerable enumerable = field.GetValue(target) as IEnumerable;
 
@@ -353,7 +355,39 @@ namespace Scoops.service
 
                     if (!property.CanRead || 
                         !(property.PropertyType.IsSubclassOf(typeof(UnityEngine.Object)) || property.PropertyType == typeof(UnityEngine.Object) ||
-                        (property.PropertyType.IsAssignableFrom(typeof(IEnumerable)) && property.PropertyType != typeof(string)))) { continue; }
+                        (typeof(IEnumerable).IsAssignableFrom(property.PropertyType) && property.PropertyType != typeof(string)))) { continue; }
+
+                    // Avoiding not having the correct arguments for dicts
+                    if (property.Name == "Item") { continue; }
+
+                    // Need to account for materials with shaders that don't have _MainTex or we'll throw errors.
+                    if (target is Material)
+                    {
+                        Material mat = (Material)target;
+                        if (!mat.HasProperty("_MainTex"))
+                        {
+                            continue;
+                        }
+                    }
+
+                    // Need to account for meshes with read/write disabled or we'll throw errors.
+                    if (target is Mesh)
+                    {
+                        Mesh mesh = (Mesh)target;
+                        if (!mesh.isReadable && meshReadProperties.Contains(property.Name))
+                        {
+                            continue;
+                        }
+                    }
+
+                    if (property.Name == "fontSharedMaterials")
+                    {
+                        Mesh mesh = (Mesh)target;
+                        if (!mesh.isReadable && meshReadProperties.Contains(property.Name))
+                        {
+                            continue;
+                        }
+                    }
 
                     List<UnityEngine.Object> references = new List<UnityEngine.Object>();
 
@@ -397,10 +431,8 @@ namespace Scoops.service
                     }
                     catch (Exception e)
                     {
-                        Plugin.Log.LogWarning("Error while calling " + propertyId + ", ignoring property and continuing:");
+                        Plugin.Log.LogWarning("Error while calling " + propertyId + ", continuing:");
                         Plugin.Log.LogWarning(e);
-
-                        ignoredProperties.AddItem(propertyId);
 
                         continue;
                     }
