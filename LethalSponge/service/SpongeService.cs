@@ -17,17 +17,23 @@ using System.Xml.Linq;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.InputSystem.HID;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.SceneManagement;
 
 namespace Scoops.service
 {
-    internal struct BundleLeakTracker
+    internal class BundleLeakTracker
     {
         public Dictionary<string, int> leakCount;
+        public int allGameObjects;
+        public int instantiatedGameObjects;
 
         public BundleLeakTracker() 
         {
             leakCount = new Dictionary<string, int>();
+            allGameObjects = 0;
+            instantiatedGameObjects = 0;
         }
     }
 
@@ -55,6 +61,13 @@ namespace Scoops.service
         private static int initialCount = 0;
 
         private static readonly List<string> meshReadProperties = new List<string>() { "vertices", "normals", "tangents", "uv", "uv2", "uv3", "uv4", "uv5", "uv6", "uv7", "uv8", "colors", "colors32", "triangles" };
+
+        public static void PluginLoad()
+        {
+            ParseConfig();
+
+            SceneManager.sceneLoaded += SceneLoaded;
+        }
 
         public static void Initialize()
         {
@@ -94,6 +107,8 @@ namespace Scoops.service
                 Plugin.Log.LogWarning("More objects after checking than before. Property calls possibly instantiated unexpected objects.");
             }
 
+            PerformCleanup();
+
             stopwatch.Stop();
             TimeSpan elapsedTime = stopwatch.Elapsed;
             int initialChange = newCount - initialCount;
@@ -109,7 +124,7 @@ namespace Scoops.service
             prevCount = newCount;
         }
 
-        public static void PerformEvaluation()
+        private static void PerformEvaluation()
         {
             allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
             referenceTracking.Clear();
@@ -129,6 +144,8 @@ namespace Scoops.service
             int audioNoRefCount = ExamineType<AudioClip>();
             int navMeshNoRefCount = ExamineType<NavMeshData>();
 
+            int gameObjectCount = ExamineGameObjects();
+
             allObjects = [];
 
             foreach (string bundleName in leakTracking.Keys)
@@ -142,17 +159,50 @@ namespace Scoops.service
                     Plugin.Log.LogMessage("For Base Game/unknown AssetBundle sources: ");
                 }
                 BundleLeakTracker tracker = leakTracking[bundleName];
+                bool prev = previousLeakTracking.TryGetValue(bundleName, out BundleLeakTracker previousTracker);
                 foreach (string assetType in tracker.leakCount.Keys)
                 {
                     int newLeakCount = tracker.leakCount[assetType];
                     Plugin.Log.LogMessage(" - " + newLeakCount + " " + assetType + " with no native unity references.");
-                    if (previousLeakTracking.TryGetValue(bundleName, out BundleLeakTracker previousTracker))
+                    if (prev && previousTracker.leakCount.ContainsKey(assetType))
                     {
                         int prevLeakCount = previousTracker.leakCount[assetType];
                         if (newLeakCount > prevLeakCount)
                         {
                             Plugin.Log.LogMessage("   - " + (newLeakCount - prevLeakCount) + " more than last check.");
                         }
+                    }
+                }
+                Plugin.Log.LogMessage(" - " + tracker.allGameObjects + " GameObjects, " + tracker.instantiatedGameObjects + " of which were Instantiated.");
+                if (prev)
+                {
+                    if (tracker.allGameObjects > previousTracker.allGameObjects)
+                    {
+                        Plugin.Log.LogMessage("   - " + (tracker.allGameObjects - previousTracker.allGameObjects) + " more than last check.");
+                    }
+                }
+            }
+            Plugin.Log.LogMessage("Objects with no native unity references will likely be cleaned up with UnloadUnusedAssets. Remember that Meshes, Textures, and Materials should be cleaned up manually.");
+            Plugin.Log.LogMessage("Unwanted GameObjects will not. Large amounts of GameObjects are normal, but if these increase day over day there may be an issue.");
+        }
+
+        private static void PerformCleanup()
+        {
+            if (Config.unloadUnused.Value)
+            {
+                Plugin.Log.LogMessage("Calling Resources.UnloadUnusedAssets().");
+                Resources.UnloadUnusedAssets();
+            }
+            if (Config.cleanSkyRenderer.Value)
+            {
+                HDRenderPipeline pipeline = RenderPipelineManager.s_CurrentPipeline as HDRenderPipeline;
+                if (pipeline != null)
+                {
+                    Plugin.Log.LogMessage("Calling Cleanup() on all SkyContexts.");
+                    foreach (CachedSkyContext skyContext in pipeline.skyManager.m_CachedSkyContexts)
+                    {
+                        Plugin.Log.LogMessage("SkyContext with refCount - " + skyContext.);
+                        skyContext.Cleanup();
                     }
                 }
             }
@@ -180,6 +230,32 @@ namespace Scoops.service
             }
 
             return noRefCount;
+        }
+
+        private static int ExamineGameObjects()
+        {
+            int gameObjectCount = 0;
+
+            GameObject[] allGameObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+            for (int i = 0; i < allGameObjects.Length; i++)
+            {
+                string name = GetOriginalName(allGameObjects[i].name);
+                if (bundleTracking.TryGetValue(name, out string bundleName) && leakTracking.ContainsKey(bundleName))
+                {
+                    if (!(allGameObjects[i].scene.name == null || allGameObjects[i].scene.name == allGameObjects[i].name))
+                    {
+                        leakTracking[bundleName].allGameObjects++;
+                        if (allGameObjects[i].GetInstanceID() < 0)
+                        {
+                            leakTracking[bundleName].instantiatedGameObjects++;
+                        }
+                    }
+                }
+            }
+
+            allGameObjects = [];
+
+            return gameObjectCount;
         }
 
         public static void SceneLoaded(Scene scene, LoadSceneMode mode)
@@ -289,7 +365,7 @@ namespace Scoops.service
 
         private static bool HandleLeakedObject(UnityEngine.Object leakedObj)
         {
-            string baseName = leakedObj.name.Replace(" (Instance)", "").ToLower();
+            string baseName = GetOriginalName(leakedObj.name);
             bundleTracking.TryGetValue(baseName, out string bundle);
             string bundleName = bundle ?? "unknown";
             // if we find a bundle, make sure it isn't on the blacklist
@@ -312,6 +388,11 @@ namespace Scoops.service
             }
 
             return false;
+        }
+
+        private static string GetOriginalName(string name)
+        {
+            return name.Replace(" (Instance)", "").ToLower();
         }
 
         public static List<UnityEngine.Object> GetUnityObjectReferences(int index)

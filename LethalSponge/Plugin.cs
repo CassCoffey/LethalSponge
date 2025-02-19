@@ -5,10 +5,7 @@ using Scoops.compatibility;
 using Scoops.patches;
 using Scoops.service;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Scoops;
 
@@ -42,33 +39,39 @@ public class Plugin : BaseUnityPlugin
 
         SpongeConfig = new(base.Config);
 
-        Log.LogInfo($"Applying patches...");
+        SpongeService.PluginLoad();
+
+        Log.LogInfo($"Applying base patches...");
         ApplyPluginPatch();
-        Log.LogInfo($"Patches applied");
-
-        SpongeService.ParseConfig();
-
-        IEnumerable<AssetBundle> allBundles = AssetBundle.GetAllLoadedAssetBundles();
-        foreach (AssetBundle bundle in allBundles)
+        Log.LogInfo($"Base patches applied");
+        
+        if (Scoops.Config.verboseLogging.Value)
         {
-            StartCoroutine(SpongeService.RegisterAssetBundleStale(bundle));
-        }
+            Log.LogInfo($"Applying verbose patches...");
+            ApplyVerbosePluginPatch();
+            Log.LogInfo($"Verbose patches applied");
 
-        SceneManager.sceneLoaded += SpongeService.SceneLoaded;
+            IEnumerable<AssetBundle> allBundles = AssetBundle.GetAllLoadedAssetBundles();
+            foreach (AssetBundle bundle in allBundles)
+            {
+                StartCoroutine(SpongeService.RegisterAssetBundleStale(bundle));
+            }
 
-        if (LLLCompat.Enabled)
-        {
-            Log.LogInfo($"Lethal Level Loader compat enabled...");
-            LLLCompat.AddBundleHook();
+            if (LLLCompat.Enabled)
+            {
+                Log.LogInfo($"Lethal Level Loader compat enabled...");
+                LLLCompat.AddBundleHook();
+            }
         }
     }
 
-    /// <summary>
-    /// Applies the patch to the game.
-    /// </summary>
     private void ApplyPluginPatch()
     {
         _harmony.PatchAll(typeof(StartOfRoundSpongePatch));
+    }
+
+    private void ApplyVerbosePluginPatch()
+    {
         _harmony.PatchAll(typeof(RoundManagerSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleAsyncSpongePatch));
