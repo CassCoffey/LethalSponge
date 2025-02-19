@@ -68,6 +68,10 @@ public class Plugin : BaseUnityPlugin
     private void ApplyPluginPatch()
     {
         _harmony.PatchAll(typeof(StartOfRoundSpongePatch));
+        if (Scoops.Config.fixFoliageLOD.Value)
+        {
+            _harmony.PatchAll(typeof(FoliageDetailDistanceSpongePatch));
+        }
     }
 
     private void ApplyVerbosePluginPatch()

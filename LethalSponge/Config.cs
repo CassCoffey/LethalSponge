@@ -9,7 +9,6 @@ namespace Scoops
         public static ConfigEntry<string> propertyBlacklist;
 
         public static ConfigEntry<bool> unloadUnused;
-        public static ConfigEntry<bool> cleanSkyRenderer;
         public static ConfigEntry<bool> fixFoliageLOD;
 
         public Config(ConfigFile cfg)
@@ -42,12 +41,6 @@ namespace Scoops
                     "unloadUnused",
                     true,
                     "Should Sponge call UnloadUnusedAssets each day?"
-            );
-            cleanSkyRenderer = cfg.Bind(
-                    "Cleanup",
-                    "cleanSkyRenderer",
-                    true,
-                    "Should Sponge cleanup leaked HDRP SkyContexts?"
             );
             fixFoliageLOD = cfg.Bind(
                     "Cleanup",

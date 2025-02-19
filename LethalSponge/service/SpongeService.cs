@@ -116,9 +116,12 @@ namespace Scoops.service
             int prevChange = newCount - prevCount;
             float prevPercentChange = ((float)prevChange / (float)prevCount) * 100f;
 
+            string qualifier = "more";
+            if (prevChange < 0) qualifier = "less";
+
             Plugin.Log.LogMessage("Sponge took " + elapsedTime.TotalSeconds + " seconds to execute.");
-            Plugin.Log.LogMessage("There are " + initialChange + " more objects than on initialization, a " + initialPercentChange + "% change.");
-            Plugin.Log.LogMessage("There are " + prevChange + " more objects than last check, a " + prevPercentChange + "% change.");
+            Plugin.Log.LogMessage("There were " + initialChange + " more objects than on initialization, a " + initialPercentChange + "% change.");
+            Plugin.Log.LogMessage("There were " + prevChange + " " + qualifier + " objects than last check, a " + prevPercentChange + "% change.");
             Plugin.Log.LogMessage("---");
 
             prevCount = newCount;
@@ -152,7 +155,7 @@ namespace Scoops.service
             {
                 if (bundleName != "unknown")
                 {
-                    Plugin.Log.LogMessage("For AssetBundle " + bundleName + ": ");
+                    Plugin.Log.LogMessage("For AssetBundle/Scene " + bundleName + ": ");
                 }
                 else
                 {
@@ -163,7 +166,7 @@ namespace Scoops.service
                 foreach (string assetType in tracker.leakCount.Keys)
                 {
                     int newLeakCount = tracker.leakCount[assetType];
-                    Plugin.Log.LogMessage(" - " + newLeakCount + " " + assetType + " with no native unity references.");
+                    Plugin.Log.LogMessage(" - " + newLeakCount + " " + assetType + " with no known native unity references.");
                     if (prev && previousTracker.leakCount.ContainsKey(assetType))
                     {
                         int prevLeakCount = previousTracker.leakCount[assetType];
@@ -173,7 +176,10 @@ namespace Scoops.service
                         }
                     }
                 }
-                Plugin.Log.LogMessage(" - " + tracker.allGameObjects + " GameObjects, " + tracker.instantiatedGameObjects + " of which were Instantiated.");
+                if (tracker.allGameObjects > 0)
+                {
+                    Plugin.Log.LogMessage(" - " + tracker.allGameObjects + " GameObjects, " + tracker.instantiatedGameObjects + " of which were Instantiated.");
+                }
                 if (prev)
                 {
                     if (tracker.allGameObjects > previousTracker.allGameObjects)
@@ -182,8 +188,9 @@ namespace Scoops.service
                     }
                 }
             }
+            Plugin.Log.LogMessage("The above counts may be inaccurate, use them as approximations. Objects can be attributed to the wrong bundle/scene in the case of overlapping names.");
             Plugin.Log.LogMessage("Objects with no native unity references will likely be cleaned up with UnloadUnusedAssets. Remember that Meshes, Textures, and Materials should be cleaned up manually.");
-            Plugin.Log.LogMessage("Unwanted GameObjects will not. Large amounts of GameObjects are normal, but if these increase day over day there may be an issue.");
+            Plugin.Log.LogMessage("Unwanted GameObjects will not. Large amounts of GameObjects can be fine, but if these increase day over day there may be an issue.");
         }
 
         private static void PerformCleanup()
@@ -192,19 +199,6 @@ namespace Scoops.service
             {
                 Plugin.Log.LogMessage("Calling Resources.UnloadUnusedAssets().");
                 Resources.UnloadUnusedAssets();
-            }
-            if (Config.cleanSkyRenderer.Value)
-            {
-                HDRenderPipeline pipeline = RenderPipelineManager.s_CurrentPipeline as HDRenderPipeline;
-                if (pipeline != null)
-                {
-                    Plugin.Log.LogMessage("Calling Cleanup() on all SkyContexts.");
-                    foreach (CachedSkyContext skyContext in pipeline.skyManager.m_CachedSkyContexts)
-                    {
-                        Plugin.Log.LogMessage("SkyContext with refCount - " + skyContext.);
-                        skyContext.Cleanup();
-                    }
-                }
             }
         }
 
@@ -260,11 +254,14 @@ namespace Scoops.service
 
         public static void SceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            streamedSceneTracking.TryGetValue(scene.name, out string bundle);
-
-            foreach (UnityEngine.GameObject obj in scene.GetRootGameObjects())
+            if (Config.verboseLogging.Value)
             {
-                FindGameObjectDependenciesRecursively(bundle ?? scene.name, obj);
+                streamedSceneTracking.TryGetValue(scene.name, out string bundle);
+
+                foreach (UnityEngine.GameObject obj in scene.GetRootGameObjects())
+                {
+                    FindGameObjectDependenciesRecursively(bundle ?? scene.name, obj);
+                }
             }
         }
 
