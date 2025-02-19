@@ -26,14 +26,12 @@ namespace Scoops.service
     internal class BundleLeakTracker
     {
         public Dictionary<string, int> leakCount;
-        public int allGameObjects;
-        public int instantiatedGameObjects;
+        public Dictionary<string, int> objectCount;
 
         public BundleLeakTracker() 
         {
             leakCount = new Dictionary<string, int>();
-            allGameObjects = 0;
-            instantiatedGameObjects = 0;
+            objectCount = new Dictionary<string, int>();
         }
     }
 
@@ -46,8 +44,8 @@ namespace Scoops.service
 
         // List of known Getters that will create new objects or problems (Unity whyyyy)
         private static List<String> ignoredProperties = new List<string>();
-
         private static List<String> ignoredAssetbundles = new List<string>();
+        private static List<String> fullReportBundles = new List<string>();
 
         private static Dictionary<string, BundleLeakTracker> leakTracking = new Dictionary<string, BundleLeakTracker>();
         private static Dictionary<string, BundleLeakTracker> previousLeakTracking = new Dictionary<string, BundleLeakTracker>();
@@ -86,8 +84,9 @@ namespace Scoops.service
 
         public static void ParseConfig()
         {
-            ignoredProperties.AddRange(Config.propertyBlacklist.Value.Split(';'));
-            ignoredAssetbundles.AddRange(Config.assetbundleBlacklist.Value.Split(';'));
+            ignoredProperties.AddRange(Config.propertyBlacklist.Value.ToLower().Split(';'));
+            ignoredAssetbundles.AddRange(Config.assetbundleBlacklist.Value.ToLower().Split(';'));
+            fullReportBundles.AddRange(Config.fullReportList.Value.ToLower().Split(';'));
         }
 
         public static void ApplySponge()
@@ -147,7 +146,8 @@ namespace Scoops.service
             int audioNoRefCount = ExamineType<AudioClip>();
             int navMeshNoRefCount = ExamineType<NavMeshData>();
 
-            int gameObjectCount = ExamineGameObjects();
+            int gameObjectCount = CountType<GameObject>();
+            int renderTextureCount = CountType<RenderTexture>();
 
             allObjects = [];
 
@@ -163,6 +163,10 @@ namespace Scoops.service
                 }
                 BundleLeakTracker tracker = leakTracking[bundleName];
                 bool prev = previousLeakTracking.TryGetValue(bundleName, out BundleLeakTracker previousTracker);
+                if (!prev)
+                {
+                    Plugin.Log.LogMessage(" - AssetBundle/Scene was not present on previous checks.");
+                }
                 foreach (string assetType in tracker.leakCount.Keys)
                 {
                     int newLeakCount = tracker.leakCount[assetType];
@@ -176,15 +180,17 @@ namespace Scoops.service
                         }
                     }
                 }
-                if (tracker.allGameObjects > 0)
+                foreach (string assetType in tracker.objectCount.Keys)
                 {
-                    Plugin.Log.LogMessage(" - " + tracker.allGameObjects + " GameObjects, " + tracker.instantiatedGameObjects + " of which were Instantiated.");
-                }
-                if (prev)
-                {
-                    if (tracker.allGameObjects > previousTracker.allGameObjects)
+                    int newObjectCount = tracker.objectCount[assetType];
+                    Plugin.Log.LogMessage(" - " + newObjectCount + " " + assetType + ".");
+                    if (prev && previousTracker.objectCount.ContainsKey(assetType))
                     {
-                        Plugin.Log.LogMessage("   - " + (tracker.allGameObjects - previousTracker.allGameObjects) + " more than last check.");
+                        int prevObjectCount = previousTracker.objectCount[assetType];
+                        if (newObjectCount > prevObjectCount)
+                        {
+                            Plugin.Log.LogMessage("   - " + (newObjectCount - prevObjectCount) + " more than last check.");
+                        }
                     }
                 }
             }
@@ -226,30 +232,48 @@ namespace Scoops.service
             return noRefCount;
         }
 
-        private static int ExamineGameObjects()
+        private static int CountType<T>() where T : UnityEngine.Object
         {
-            int gameObjectCount = 0;
+            int typeCount = 0;
 
-            GameObject[] allGameObjects = Resources.FindObjectsOfTypeAll<GameObject>();
-            for (int i = 0; i < allGameObjects.Length; i++)
+            T[] allType = Resources.FindObjectsOfTypeAll<T>();
+            for (int i = 0; i < allType.Length; i++)
             {
-                string name = GetOriginalName(allGameObjects[i].name);
-                if (bundleTracking.TryGetValue(name, out string bundleName) && leakTracking.ContainsKey(bundleName))
+                string name = GetOriginalName(allType[i].name);
+                if (bundleTracking.TryGetValue(name, out string bundleName))
                 {
-                    if (!(allGameObjects[i].scene.name == null || allGameObjects[i].scene.name == allGameObjects[i].name))
+                    if (typeof(T).Equals(typeof(GameObject)))
                     {
-                        leakTracking[bundleName].allGameObjects++;
-                        if (allGameObjects[i].GetInstanceID() < 0)
+                        GameObject gameObject = allType[i] as GameObject;
+                        if (gameObject.scene.name == null || gameObject.scene.name == gameObject.name)
                         {
-                            leakTracking[bundleName].instantiatedGameObjects++;
+                            continue;
                         }
+                    }
+
+                    string countedType = typeof(T).Name;
+
+                    if (fullReportBundles.Contains(bundleName.ToLower()))
+                    {
+                        Plugin.Log.LogMessage("Counted " + countedType + " with name '" + allType[i].name + "' and ID '" + allType[i].GetInstanceID() + "' from bundle/scene " + bundleName + ".");
+                    }
+
+                    if (leakTracking.ContainsKey(bundleName))
+                    {
+                        leakTracking[bundleName].objectCount.TryGetValue(countedType, out int currentCount);
+                        leakTracking[bundleName].objectCount[countedType] = currentCount + 1;
+                    }
+                    else
+                    {
+                        leakTracking.Add(bundleName, new BundleLeakTracker());
+                        leakTracking[bundleName].objectCount.Add(countedType, 1);
                     }
                 }
             }
 
-            allGameObjects = [];
+            allType = [];
 
-            return gameObjectCount;
+            return typeCount;
         }
 
         public static void SceneLoaded(Scene scene, LoadSceneMode mode)
@@ -369,6 +393,11 @@ namespace Scoops.service
             if (!ignoredAssetbundles.Contains(bundle))
             {
                 string leakedType = leakedObj.GetType().Name;
+
+                if (fullReportBundles.Contains(bundleName.ToLower()))
+                {
+                    Plugin.Log.LogMessage("Found suspected leaked " + leakedType + " with name '" + leakedObj.name + "' and ID '" + leakedObj.GetInstanceID() + "' from bundle/scene " + bundleName + ".");
+                }
 
                 if (leakTracking.ContainsKey(bundleName))
                 {
@@ -503,7 +532,7 @@ namespace Scoops.service
             {
                 foreach (var property in assignableProperties)
                 {
-                    string propertyId = property.DeclaringType.Name + "." + property.Name;
+                    string propertyId = (property.DeclaringType.Name + "." + property.Name).ToLower();
                     if (ignoredProperties.Contains(propertyId)) { continue; }
 
                     if (!property.CanRead || 

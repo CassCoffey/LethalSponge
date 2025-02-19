@@ -5,6 +5,7 @@ namespace Scoops
     public class Config
     {
         public static ConfigEntry<bool> verboseLogging;
+        public static ConfigEntry<string> fullReportList;
         public static ConfigEntry<string> assetbundleBlacklist;
         public static ConfigEntry<string> propertyBlacklist;
 
@@ -19,6 +20,13 @@ namespace Scoops
                     "verboseLogging",
                     false,
                     "Whether Sponge should output detailed information about possible leak sources. (COSTLY FOR PERFORMANCE)."
+            );
+
+            fullReportList = cfg.Bind(
+                    "Investigation",
+                    "fullReportList",
+                    "",
+                    "Bundle/Scenes in this semicolon-separated list will have all objects' Name and ID printed each check. Use 'unknown' for basegame/unknown sources."
             );
 
             assetbundleBlacklist = cfg.Bind(
