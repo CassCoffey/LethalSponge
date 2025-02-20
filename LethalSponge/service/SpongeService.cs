@@ -114,11 +114,13 @@ namespace Scoops.service
                 PerformEvaluation();
             }
             int newCount = Resources.FindObjectsOfTypeAll<UnityEngine.Object>().Length;
+            Plugin.Log.LogMessage("There are " + newCount + " loaded objects total.");
             if (Config.verboseLogging.Value && newCount > allObjects.Length)
             {
-                Plugin.Log.LogMessage("There are now " + newCount + " objects.");
-                Plugin.Log.LogWarning("More objects after checking than before. Property calls possibly instantiated unexpected objects.");
+                Plugin.Log.LogWarning("More objects after evaluating than before. Property calls possibly instantiated unexpected objects.");
             }
+
+            allObjects = [];
 
             PerformCleanup();
 
@@ -164,8 +166,6 @@ namespace Scoops.service
 
             int gameObjectCount = CountType<GameObject>();
             int cameraCount = CountType<Camera>();
-
-            allObjects = [];
 
             foreach (string bundleName in leakTracking.Keys)
             {
