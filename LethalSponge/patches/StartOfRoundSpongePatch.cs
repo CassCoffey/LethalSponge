@@ -21,7 +21,7 @@ namespace Scoops.patches
         [HarmonyPostfix]
         private static void StartOfRound_PassTimeToNextDay(ref StartOfRound __instance)
         {
-            if (!Config.debugMode.Value)
+            if (SpongeService.enabled)
             {
                 SpongeService.ApplySponge();
             }
@@ -29,13 +29,35 @@ namespace Scoops.patches
 
         [HarmonyPatch(typeof(HUDManager))]
         [HarmonyPatch("AddTextToChatOnServer")]
-        [HarmonyPostfix]
-        private static void HUDManager_AddTextToChatOnServer(ref HUDManager __instance, string chatMessage, int playerId)
+        [HarmonyPrefix]
+        private static bool HUDManager_AddTextToChatOnServer(ref HUDManager __instance, string chatMessage, int playerId)
         {
-            if (Config.debugMode.Value && chatMessage.ToLower() == "/sponge")
+            if (chatMessage.ToLower() == "/sponge")
             {
                 SpongeService.ApplySponge();
+                return false;
             }
+
+            if (chatMessage.ToLower() == "/sponge evaluate")
+            {
+                SpongeService.ApplySponge(SpongeMode.Evaluate);
+                return false;
+            }
+
+            if (chatMessage.ToLower() == "/sponge clean")
+            {
+                SpongeService.ApplySponge(SpongeMode.Clean);
+                return false;
+            }
+
+            if (chatMessage.ToLower() == "/sponge toggle")
+            {
+                Plugin.Log.LogMessage((SpongeService.enabled ? "Disabling" : "Enabling") + " Sponge daily automatic activation.");
+                SpongeService.enabled = !SpongeService.enabled;
+                return false;
+            }
+
+            return true;
         }
     }
 }

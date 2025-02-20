@@ -13,6 +13,13 @@ using UnityEngine.SceneManagement;
 
 namespace Scoops.service
 {
+    public enum SpongeMode
+    {
+        Evaluate,
+        Clean,
+        Full,
+    }
+
     internal class BundleLeakTracker
     {
         public Dictionary<string, int> leakCount;
@@ -27,6 +34,8 @@ namespace Scoops.service
 
     internal static class SpongeService
     {
+        public static bool enabled = true;
+
         private static readonly Dictionary<Type, List<FieldInfo>> assignableFieldsByObjectType = new Dictionary<Type, List<FieldInfo>>() { { typeof(UnityEngine.Object), null } };
         private static readonly Dictionary<Type, List<PropertyInfo>> assignablePropertiesByObjectType = new Dictionary<Type, List<PropertyInfo>>() { { typeof(UnityEngine.Object), null } };
 
@@ -103,26 +112,29 @@ namespace Scoops.service
             return !ignoredAssetbundles.Contains(bundleName.ToLower());
         }
 
-        public static void ApplySponge()
+        public static void ApplySponge(SpongeMode mode = SpongeMode.Full)
         {
             Plugin.Log.LogMessage("---");
             Plugin.Log.LogMessage("Applying Sponge");
             stopwatch.Restart();
 
-            if (Config.verboseLogging.Value)
+            if (Config.verboseLogging.Value && (mode == SpongeMode.Evaluate || mode == SpongeMode.Full))
             {
                 PerformEvaluation();
             }
             int newCount = Resources.FindObjectsOfTypeAll<UnityEngine.Object>().Length;
             Plugin.Log.LogMessage("There are " + newCount + " loaded objects total.");
-            if (Config.verboseLogging.Value && newCount > allObjects.Length)
+            if (Config.verboseLogging.Value && (mode == SpongeMode.Evaluate || mode == SpongeMode.Full) && newCount > allObjects.Length)
             {
                 Plugin.Log.LogWarning("More objects after evaluating than before. Property calls possibly instantiated unexpected objects.");
             }
 
             allObjects = [];
 
-            PerformCleanup();
+            if (mode == SpongeMode.Clean || mode == SpongeMode.Full)
+            {
+                PerformCleanup();
+            }
 
             stopwatch.Stop();
             TimeSpan elapsedTime = stopwatch.Elapsed;

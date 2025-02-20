@@ -14,7 +14,7 @@ namespace Scoops
         public static ConfigEntry<bool> unloadUnused;
         public static ConfigEntry<bool> fixFoliageLOD;
 
-        public static ConfigEntry<bool> debugMode;
+        public static ConfigEntry<bool> startMode;
 
         public Config(ConfigFile cfg)
         {
@@ -76,11 +76,11 @@ namespace Scoops
             );
 
             // Debug
-            debugMode = cfg.Bind(
+            startMode = cfg.Bind(
                     "Debug",
-                    "debugMode",
-                    false,
-                    "If true, Sponge will no longer run each day and will only run when you type '/sponge' in chat."
+                    "startMode",
+                    true,
+                    "If false, Sponge will no longer run automatically each day and will only run when you type '/sponge' in chat. This can be toggled mid-game with '/sponge toggle'."
             );
         }
     }
