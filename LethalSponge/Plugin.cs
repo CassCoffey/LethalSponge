@@ -4,6 +4,7 @@ using HarmonyLib;
 using Scoops.compatibility;
 using Scoops.patches;
 using Scoops.service;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -44,18 +45,14 @@ public class Plugin : BaseUnityPlugin
         Log.LogInfo($"Applying base patches...");
         ApplyPluginPatch();
         Log.LogInfo($"Base patches applied");
-        
+
         if (Scoops.Config.verboseLogging.Value)
         {
             Log.LogInfo($"Applying verbose patches...");
             ApplyVerbosePluginPatch();
             Log.LogInfo($"Verbose patches applied");
 
-            IEnumerable<AssetBundle> allBundles = AssetBundle.GetAllLoadedAssetBundles();
-            foreach (AssetBundle bundle in allBundles)
-            {
-                StartCoroutine(SpongeService.RegisterAssetBundleStale(bundle));
-            }
+            StartCoroutine(RegisterAssetBundlesStale());
 
             if (LLLCompat.Enabled)
             {
@@ -63,6 +60,25 @@ public class Plugin : BaseUnityPlugin
                 LLLCompat.AddBundleHook();
             }
         }
+    }
+
+    public IEnumerator RegisterAssetBundlesStale()
+    {
+        // Delay to catch objects that are still instantiating
+        yield return new WaitForSeconds(1.5f);
+
+        Plugin.Log.LogMessage("Sponge is acquiring assetbundle references, please wait.");
+        GameObject[] allGameObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+        IEnumerable<AssetBundle> allBundles = AssetBundle.GetAllLoadedAssetBundles();
+
+        foreach (AssetBundle bundle in allBundles)
+        {
+            StartCoroutine(SpongeService.RegisterAssetBundleStale(bundle, allGameObjects));
+        }
+
+        Plugin.Log.LogMessage("Assetbundle references acquired.");
+
+        allGameObjects = [];
     }
 
     private void ApplyPluginPatch()

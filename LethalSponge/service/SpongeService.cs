@@ -1,24 +1,14 @@
-﻿using BepInEx;
-using DunGen;
-using DunGen.Graph;
-using HarmonyLib;
-using LethalLevelLoader;
-using Mono.Cecil;
+﻿using DunGen;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Reflection;
-using System.Xml.Linq;
+using Unity.Properties;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.InputSystem.HID;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.SceneManagement;
 
 namespace Scoops.service
@@ -45,6 +35,7 @@ namespace Scoops.service
         // List of known Getters that will create new objects or problems (Unity whyyyy)
         private static List<String> ignoredProperties = new List<string>();
         private static List<String> ignoredAssetbundles = new List<string>();
+        private static List<String> focusedAssetbundles = new List<string>();
         private static List<String> fullReportBundles = new List<string>();
 
         private static Dictionary<string, BundleLeakTracker> leakTracking = new Dictionary<string, BundleLeakTracker>();
@@ -84,9 +75,32 @@ namespace Scoops.service
 
         public static void ParseConfig()
         {
-            ignoredProperties.AddRange(Config.propertyBlacklist.Value.ToLower().Split(';'));
-            ignoredAssetbundles.AddRange(Config.assetbundleBlacklist.Value.ToLower().Split(';'));
-            fullReportBundles.AddRange(Config.fullReportList.Value.ToLower().Split(';'));
+            if (Config.propertyBlacklist.Value != "")
+            {
+                ignoredProperties.AddRange(Config.propertyBlacklist.Value.ToLower().Split(';'));
+            }
+            if (Config.assetbundleBlacklist.Value != "")
+            {
+                ignoredAssetbundles.AddRange(Config.assetbundleBlacklist.Value.ToLower().Split(';'));
+            }
+            if (Config.assetbundleWhitelist.Value != "")
+            {
+                focusedAssetbundles.AddRange(Config.assetbundleWhitelist.Value.ToLower().Split(';'));
+            }
+            if (Config.fullReportList.Value != "")
+            {
+                fullReportBundles.AddRange(Config.fullReportList.Value.ToLower().Split(';'));
+            }
+        }
+
+        public static bool AssetBundleValid(string bundleName)
+        {
+            if (focusedAssetbundles.Count > 0)
+            {
+                return focusedAssetbundles.Contains(bundleName.ToLower());
+            }
+            
+            return !ignoredAssetbundles.Contains(bundleName.ToLower());
         }
 
         public static void ApplySponge()
@@ -133,6 +147,8 @@ namespace Scoops.service
             previousLeakTracking = leakTracking;
             leakTracking = new Dictionary<string, BundleLeakTracker>();
 
+            Plugin.Log.LogMessage("Evaluating loaded objects, please wait.");
+
             // Initial pass to build references
             for (int i = 0; i < allObjects.Length; i++)
             {
@@ -147,7 +163,7 @@ namespace Scoops.service
             int navMeshNoRefCount = ExamineType<NavMeshData>();
 
             int gameObjectCount = CountType<GameObject>();
-            int renderTextureCount = CountType<RenderTexture>();
+            int cameraCount = CountType<Camera>();
 
             allObjects = [];
 
@@ -195,8 +211,8 @@ namespace Scoops.service
                 }
             }
             Plugin.Log.LogMessage("The above counts may be inaccurate, use them as approximations. Objects can be attributed to the wrong bundle/scene in the case of overlapping names.");
-            Plugin.Log.LogMessage("Objects with no native unity references will likely be cleaned up with UnloadUnusedAssets. Remember that Meshes, Textures, and Materials should be cleaned up manually.");
-            Plugin.Log.LogMessage("Unwanted GameObjects will not. Large amounts of GameObjects can be fine, but if these increase day over day there may be an issue.");
+            Plugin.Log.LogMessage("Remember that Meshes, Textures, and Materials should be cleaned up manually. Objects with no native unity references will likely be cleaned up by UnloadUnusedAssets.");
+            Plugin.Log.LogMessage("Unwanted GameObjects will not be cleaned up automatically. Large amounts of GameObjects can be fine, but if these increase day over day there may be an issue.");
         }
 
         private static void PerformCleanup()
@@ -239,39 +255,56 @@ namespace Scoops.service
             T[] allType = Resources.FindObjectsOfTypeAll<T>();
             for (int i = 0; i < allType.Length; i++)
             {
-                string name = GetOriginalName(allType[i].name);
-                if (bundleTracking.TryGetValue(name, out string bundleName))
+                string bundle = TryGetObjectBundleName(allType[i].name);
+
+                // if we find a bundle, make sure it isn't on the blacklist
+                if (!AssetBundleValid(bundle)) { continue; }
+
+                if (typeof(GameObject).IsAssignableFrom(typeof(T)))
                 {
-                    if (typeof(T).Equals(typeof(GameObject)))
+                    GameObject gameObject = allType[i] as GameObject;
+                    if (gameObject.scene.name == null || gameObject.scene.name == gameObject.name || (Config.ignoreInactiveObjects.Value && !gameObject.activeInHierarchy))
                     {
-                        GameObject gameObject = allType[i] as GameObject;
-                        if (gameObject.scene.name == null || gameObject.scene.name == gameObject.name)
-                        {
-                            continue;
-                        }
+                        continue;
                     }
+                }
 
-                    string countedType = typeof(T).Name;
+                if (typeof(UnityEngine.Component).IsAssignableFrom(typeof(T)))
+                {
+                    Behaviour behavior = allType[i] as Behaviour;
+                    if (Config.ignoreInactiveObjects.Value && (!behavior.enabled || !behavior.gameObject.activeInHierarchy))
+                    {
+                        continue;
+                    }
+                }
 
-                    if (fullReportBundles.Contains(bundleName.ToLower()))
-                    {
-                        Plugin.Log.LogMessage("Counted " + countedType + " with name '" + allType[i].name + "' and ID '" + allType[i].GetInstanceID() + "' from bundle/scene " + bundleName + ".");
-                    }
+                string countedType = typeof(T).Name;
 
-                    if (leakTracking.ContainsKey(bundleName))
-                    {
-                        leakTracking[bundleName].objectCount.TryGetValue(countedType, out int currentCount);
-                        leakTracking[bundleName].objectCount[countedType] = currentCount + 1;
-                    }
-                    else
-                    {
-                        leakTracking.Add(bundleName, new BundleLeakTracker());
-                        leakTracking[bundleName].objectCount.Add(countedType, 1);
-                    }
+                if (fullReportBundles.Contains(bundle.ToLower()))
+                {
+                    Plugin.Log.LogMessage("Counted " + countedType + " with name '" + allType[i].name + "' and ID '" + allType[i].GetInstanceID() + "' from bundle/scene " + bundle + ".");
+                }
+
+                typeCount++;
+
+                if (leakTracking.ContainsKey(bundle))
+                {
+                    leakTracking[bundle].objectCount.TryGetValue(countedType, out int currentCount);
+                    leakTracking[bundle].objectCount[countedType] = currentCount + 1;
+                }
+                else
+                {
+                    leakTracking.Add(bundle, new BundleLeakTracker());
+                    leakTracking[bundle].objectCount.Add(countedType, 1);
                 }
             }
 
             allType = [];
+
+            if (typeCount > 0)
+            {
+                Plugin.Log.LogMessage("Found " + typeCount + " " + typeof(T).Name + ".");
+            }
 
             return typeCount;
         }
@@ -282,7 +315,7 @@ namespace Scoops.service
             {
                 streamedSceneTracking.TryGetValue(scene.name, out string bundle);
 
-                foreach (UnityEngine.GameObject obj in scene.GetRootGameObjects())
+                foreach (GameObject obj in scene.GetRootGameObjects())
                 {
                     FindGameObjectDependenciesRecursively(bundle ?? scene.name, obj);
                 }
@@ -298,19 +331,21 @@ namespace Scoops.service
 
         public static void ObjectLoaded(AssetBundle bundle, UnityEngine.Object obj)
         {
+            string bundleName = FormatBundleName(bundle.name);
+
             GameObject gameObject = obj as GameObject;
             UnityEngine.Component component = obj as UnityEngine.Component;
             if (gameObject != null)
             {
-                FindGameObjectDependenciesRecursively(bundle.name, gameObject);
+                FindGameObjectDependenciesRecursively(bundleName, gameObject);
             }
             else if (component != null)
             {
-                BuildBundleDependencies(bundle.name, GetUnityObjectReferences(component));
+                BuildBundleDependencies(bundleName, GetUnityObjectReferences(component));
             }
             else
             {
-                bundleTracking[obj.name.ToLower()] = bundle.name;
+                BuildBundleDependencies(bundleName, obj);
             }
         }
 
@@ -334,12 +369,14 @@ namespace Scoops.service
 
         public static void RegisterAssetBundle(AssetBundle bundle)
         {
+            string bundleName = FormatBundleName(bundle.name);
+
             if (bundle.isStreamedSceneAssetBundle)
             {
                 foreach (string scenePath in bundle.GetAllScenePaths())
                 {
                     string sceneName = Path.GetFileNameWithoutExtension(scenePath);
-                    streamedSceneTracking.TryAdd(sceneName, bundle.name);
+                    streamedSceneTracking.TryAdd(sceneName, bundleName);
                 }
             }
             else
@@ -347,24 +384,21 @@ namespace Scoops.service
                 foreach (string assetPath in bundle.GetAllAssetNames())
                 {
                     string assetName = Path.GetFileNameWithoutExtension(assetPath).ToLower();
-                    bundleTracking.TryAdd(assetName, bundle.name);
+                    bundleTracking.TryAdd(assetName, bundleName);
                 }
             }
         }
 
-        public static IEnumerator RegisterAssetBundleStale(AssetBundle bundle)
+        public static IEnumerator RegisterAssetBundleStale(AssetBundle bundle, GameObject[] allGameObjects)
         {
-            // Delay to catch objects that are still instantiating
-            yield return new WaitForSeconds(1.5f);
-
-            GameObject[] allGameObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+            string bundleName = FormatBundleName(bundle.name);
 
             if (bundle.isStreamedSceneAssetBundle)
             {
                 foreach (string scenePath in bundle.GetAllScenePaths())
                 {
                     string sceneName = Path.GetFileNameWithoutExtension(scenePath);
-                    streamedSceneTracking.TryAdd(sceneName, bundle.name);
+                    streamedSceneTracking.TryAdd(sceneName, bundleName);
                 }
             }
             else
@@ -372,53 +406,75 @@ namespace Scoops.service
                 foreach (string assetPath in bundle.GetAllAssetNames())
                 {
                     string assetName = Path.GetFileNameWithoutExtension(assetPath).ToLower();
-                    bundleTracking.TryAdd(assetName, bundle.name);
-
-                    GameObject existingObj = allGameObjects.Where(x => x.name.ToLower() == assetName).FirstOrDefault<GameObject>();
-
-                    if (existingObj != default(GameObject))
+                    if (!bundleTracking.ContainsKey(assetName))
                     {
-                        FindGameObjectDependenciesRecursively(bundle.name, existingObj);
+                        bundleTracking.TryAdd(assetName, bundleName);
+
+                        GameObject existingObj = allGameObjects.Where(x => x.name.ToLower() == assetName).FirstOrDefault<GameObject>();
+
+                        if (existingObj != default(GameObject))
+                        {
+                            FindGameObjectDependenciesRecursively(bundleName, existingObj);
+                        }
                     }
                 }
             }
+
+            yield return null;
+        }
+
+        private static string FormatBundleName(string bundleName)
+        {
+            return (bundleName == null || bundleName == "" ? "unknown" : bundleName).ToLower();
         }
 
         private static bool HandleLeakedObject(UnityEngine.Object leakedObj)
         {
-            string baseName = GetOriginalName(leakedObj.name);
-            bundleTracking.TryGetValue(baseName, out string bundle);
-            string bundleName = bundle ?? "unknown";
+            string bundle = TryGetObjectBundleName(leakedObj.name);
+
             // if we find a bundle, make sure it isn't on the blacklist
-            if (!ignoredAssetbundles.Contains(bundle))
+            if (!AssetBundleValid(bundle)) { return false; }
+
+            string leakedType = leakedObj.GetType().Name;
+
+            if (fullReportBundles.Contains(bundle))
             {
-                string leakedType = leakedObj.GetType().Name;
-
-                if (fullReportBundles.Contains(bundleName.ToLower()))
-                {
-                    Plugin.Log.LogMessage("Found suspected leaked " + leakedType + " with name '" + leakedObj.name + "' and ID '" + leakedObj.GetInstanceID() + "' from bundle/scene " + bundleName + ".");
-                }
-
-                if (leakTracking.ContainsKey(bundleName))
-                {
-                    leakTracking[bundleName].leakCount.TryGetValue(leakedType, out int currentCount);
-                    leakTracking[bundleName].leakCount[leakedType] = currentCount + 1;
-                }
-                else
-                {
-                    leakTracking.Add(bundleName, new BundleLeakTracker());
-                    leakTracking[bundleName].leakCount.Add(leakedType, 1);
-                }
-
-                return true;
+                Plugin.Log.LogMessage("Found suspected leaked " + leakedType + " with name '" + leakedObj.name + "' and ID '" + leakedObj.GetInstanceID() + "' from bundle/scene " + bundle + ".");
             }
 
-            return false;
+            if (leakTracking.ContainsKey(bundle))
+            {
+                leakTracking[bundle].leakCount.TryGetValue(leakedType, out int currentCount);
+                leakTracking[bundle].leakCount[leakedType] = currentCount + 1;
+            }
+            else
+            {
+                leakTracking.Add(bundle, new BundleLeakTracker());
+                leakTracking[bundle].leakCount.Add(leakedType, 1);
+            }
+
+            return true;
         }
 
-        private static string GetOriginalName(string name)
+        private static string TryGetObjectBundleName(string name)
         {
-            return name.Replace(" (Instance)", "").ToLower();
+            string objectName = name.ToLower();
+
+            bundleTracking.TryGetValue(objectName, out string bundleName);
+
+            if (bundleName == null)
+            {
+                bundleTracking.TryGetValue(objectName.Replace(" (instance)", ""), out bundleName);
+            }
+
+            if (bundleName == null)
+            {
+                bundleTracking.TryGetValue(objectName.Replace("(clone)", ""), out bundleName);
+            }
+
+            bundleName ??= "unknown";
+
+            return bundleName;
         }
 
         public static List<UnityEngine.Object> GetUnityObjectReferences(int index)
@@ -431,183 +487,192 @@ namespace Scoops.service
 
         public static List<UnityEngine.Object> GetUnityObjectReferences(UnityEngine.Object target)
         {
+            List<UnityEngine.Object> result = new List<UnityEngine.Object>();
             Type objectType = target.GetType();
 
-            List<UnityEngine.Object> result = new List<UnityEngine.Object>();
-
-            if (target.GetType() == typeof(Camera)) { return result; }
-
-            if (!assignableFieldsByObjectType.TryGetValue(objectType, out var assignableFields))
+            try
             {
-                var type = objectType;
-                do
+                if (target.GetType() == typeof(Camera)) { return result; }
+
+                if (!assignableFieldsByObjectType.TryGetValue(objectType, out var assignableFields))
                 {
-                    const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
-                    foreach (var field in type.GetFields(flags))
+                    var type = objectType;
+                    do
                     {
+                        const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+                        foreach (var field in type.GetFields(flags))
+                        {
+                            assignableFields ??= new List<FieldInfo>();
+                            assignableFields.Add(field);
+                        }
+
+                        type = type.BaseType;
+                        if (!assignableFieldsByObjectType.TryGetValue(type, out var assignableFieldsFromBaseTypes))
+                        {
+                            continue;
+                        }
+
+                        if (assignableFieldsFromBaseTypes is null)
+                        {
+                            break;
+                        }
+
                         assignableFields ??= new List<FieldInfo>();
-                        assignableFields.Add(field);
-                    }
+                        assignableFields.AddRange(assignableFieldsFromBaseTypes);
 
-                    type = type.BaseType;
-                    if (!assignableFieldsByObjectType.TryGetValue(type, out var assignableFieldsFromBaseTypes))
-                    {
-                        continue;
-                    }
-
-                    if (assignableFieldsFromBaseTypes is null)
-                    {
                         break;
                     }
+                    while (true);
 
-                    assignableFields ??= new List<FieldInfo>();
-                    assignableFields.AddRange(assignableFieldsFromBaseTypes);
-
-                    break;
+                    assignableFieldsByObjectType.Add(objectType, assignableFields);
                 }
-                while (true);
 
-                assignableFieldsByObjectType.Add(objectType, assignableFields);
-            }
-
-            if (!assignablePropertiesByObjectType.TryGetValue(objectType, out var assignableProperties))
-            {
-                var type = objectType;
-                do
+                if (!assignablePropertiesByObjectType.TryGetValue(objectType, out var assignableProperties))
                 {
-                    const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
-                    foreach (var property in type.GetProperties(flags))
+                    var type = objectType;
+                    do
                     {
+                        const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+                        foreach (var property in type.GetProperties(flags))
+                        {
+                            assignableProperties ??= new List<PropertyInfo>();
+                            assignableProperties.Add(property);
+                        }
+
+                        type = type.BaseType;
+                        if (!assignablePropertiesByObjectType.TryGetValue(type, out var assignablePropertiesFromBaseTypes))
+                        {
+                            continue;
+                        }
+
+                        if (assignablePropertiesFromBaseTypes is null)
+                        {
+                            break;
+                        }
+
                         assignableProperties ??= new List<PropertyInfo>();
-                        assignableProperties.Add(property);
-                    }
+                        assignableProperties.AddRange(assignablePropertiesFromBaseTypes);
 
-                    type = type.BaseType;
-                    if (!assignablePropertiesByObjectType.TryGetValue(type, out var assignablePropertiesFromBaseTypes))
-                    {
-                        continue;
-                    }
-
-                    if (assignablePropertiesFromBaseTypes is null)
-                    {
                         break;
                     }
+                    while (true);
 
-                    assignableProperties ??= new List<PropertyInfo>();
-                    assignableProperties.AddRange(assignablePropertiesFromBaseTypes);
-
-                    break;
+                    assignablePropertiesByObjectType.Add(objectType, assignableProperties);
                 }
-                while (true);
 
-                assignablePropertiesByObjectType.Add(objectType, assignableProperties);
-            }
-
-            if (assignableFields is not null)
-            {
-                foreach (var field in assignableFields)
+                if (assignableFields is not null)
                 {
-                    if (!(field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)) || field.FieldType == typeof(UnityEngine.Object) || 
-                        (typeof(IEnumerable).IsAssignableFrom(field.FieldType) && field.FieldType != typeof(string)))) { continue; }
-
-                    IEnumerable enumerable = field.GetValue(target) as IEnumerable;
-
-                    if (enumerable != null && !(enumerable is string))
+                    foreach (var field in assignableFields)
                     {
-                        foreach (var obj in enumerable)
-                        {
-                            UnityEngine.Object reference = obj as UnityEngine.Object;
-                            if (reference != null) result.Add(reference);
-                        }
-                    }
-                    else
-                    {
-                        UnityEngine.Object reference = field.GetValue(target) as UnityEngine.Object;
-                        if (reference != null) result.Add(reference);
-                    }
-                }
-            }
+                        if (!(field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)) || field.FieldType == typeof(UnityEngine.Object) ||
+                            (typeof(IEnumerable).IsAssignableFrom(field.FieldType) && field.FieldType != typeof(string)))) { continue; }
 
-            if (assignableProperties is not null)
-            {
-                foreach (var property in assignableProperties)
-                {
-                    string propertyId = (property.DeclaringType.Name + "." + property.Name).ToLower();
-                    if (ignoredProperties.Contains(propertyId)) { continue; }
-
-                    if (!property.CanRead || 
-                        !(property.PropertyType.IsSubclassOf(typeof(UnityEngine.Object)) || property.PropertyType == typeof(UnityEngine.Object) ||
-                        (typeof(IEnumerable).IsAssignableFrom(property.PropertyType) && property.PropertyType != typeof(string)))) { continue; }
-
-                    // Avoiding not having the correct arguments for dicts
-                    if (property.Name == "Item") { continue; }
-
-                    // Need to account for materials with shaders that don't have _MainTex or we'll throw errors.
-                    if (target is Material)
-                    {
-                        Material mat = (Material)target;
-                        if (!mat.HasProperty("_MainTex") && property.Name == "mainTexture")
-                        {
-                            continue;
-                        }
-                    }
-
-                    // Need to account for meshes or we'll throw errors.
-                    if (target is Mesh)
-                    {
-                        Mesh mesh = (Mesh)target;
-                        if (meshReadProperties.Contains(property.Name))
-                        {
-                            continue;
-                        }
-                    }
-
-                    try
-                    {
-                        IEnumerable enumerable = property.GetValue(target) as IEnumerable;
+                        IEnumerable enumerable = field.GetValue(target) as IEnumerable;
 
                         if (enumerable != null && !(enumerable is string))
                         {
                             foreach (var obj in enumerable)
                             {
                                 UnityEngine.Object reference = obj as UnityEngine.Object;
+                                if (reference != null) result.Add(reference);
+                            }
+                        }
+                        else
+                        {
+                            UnityEngine.Object reference = field.GetValue(target) as UnityEngine.Object;
+                            if (reference != null) result.Add(reference);
+                        }
+                    }
+                }
+
+                if (assignableProperties is not null)
+                {
+                    foreach (var property in assignableProperties)
+                    {
+                        string propertyId = (property.DeclaringType.Name + "." + property.Name).ToLower();
+                        if (ignoredProperties.Contains(propertyId)) { continue; }
+
+                        if (!property.CanRead ||
+                            !(property.PropertyType.IsSubclassOf(typeof(UnityEngine.Object)) || property.PropertyType == typeof(UnityEngine.Object) ||
+                            (typeof(IEnumerable).IsAssignableFrom(property.PropertyType) && property.PropertyType != typeof(string)))) { continue; }
+
+                        // Avoiding not having the correct arguments for dicts
+                        if (property.Name == "Item") { continue; }
+
+                        // Need to account for materials with shaders that don't have _MainTex or we'll throw errors.
+                        if (target is Material)
+                        {
+                            Material mat = (Material)target;
+                            if (!mat.HasProperty("_MainTex") && property.Name == "mainTexture")
+                            {
+                                continue;
+                            }
+                        }
+
+                        // Need to account for meshes or we'll throw errors.
+                        if (target is Mesh)
+                        {
+                            Mesh mesh = (Mesh)target;
+                            if (meshReadProperties.Contains(property.Name))
+                            {
+                                continue;
+                            }
+                        }
+
+                        try
+                        {
+                            IEnumerable enumerable = property.GetValue(target) as IEnumerable;
+
+                            if (enumerable != null && !(enumerable is string))
+                            {
+                                foreach (var obj in enumerable)
+                                {
+                                    UnityEngine.Object reference = obj as UnityEngine.Object;
+                                    if (reference != null)
+                                    {
+                                        result.Add(reference);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                UnityEngine.Object reference = property.GetValue(target) as UnityEngine.Object;
                                 if (reference != null)
                                 {
                                     result.Add(reference);
                                 }
                             }
-                        } 
-                        else
+                        }
+                        catch (Exception e)
                         {
-                            UnityEngine.Object reference = property.GetValue(target) as UnityEngine.Object;
-                            if (reference != null)
-                            {
-                                result.Add(reference);
-                            }
+                            Plugin.Log.LogWarning("Error while calling " + propertyId + ", continuing:");
+                            Plugin.Log.LogWarning(e);
+
+                            continue;
                         }
                     }
-                    catch (Exception e)
-                    {
-                        Plugin.Log.LogWarning("Error while calling " + propertyId + ", continuing:");
-                        Plugin.Log.LogWarning(e);
+                }
 
-                        continue;
+                // Need to account for materials having many textures.
+                if (target is Material)
+                {
+                    Material mat = (Material)target;
+                    foreach (string texName in mat.GetTexturePropertyNames())
+                    {
+                        Texture tex = mat.GetTexture(texName);
+                        if (tex != null) result.Add(tex);
                     }
                 }
-            }
 
-            // Need to account for materials having many textures.
-            if (target is Material)
+                return result;
+            }
+            catch (Exception e)
             {
-                Material mat = (Material)target;
-                foreach (string texName in mat.GetTexturePropertyNames())
-                {
-                    Texture tex = mat.GetTexture(texName);
-                    if (tex != null) result.Add(tex);
-                }
-            }
+                Plugin.Log.LogWarning("Error while retrieving object references for " + target.name + " of type " + objectType.Name + ", continuing:");
+                Plugin.Log.LogWarning(e);
 
-            return result;
+                return result;
+            }
         }
 
         public static void IncrementReferenceCounts(List<UnityEngine.Object> references)
@@ -620,15 +685,24 @@ namespace Scoops.service
             }
         }
 
+        public static void BuildBundleDependencies(string bundleName, UnityEngine.Object reference)
+        {
+            if (!AssetBundleValid(bundleName) || reference == null) { return; }
+
+            if (!bundleTracking.ContainsKey(reference.name.ToLower()))
+            {
+                bundleTracking[reference.name.ToLower()] = bundleName;
+                BuildBundleDependencies(bundleName, GetUnityObjectReferences(reference));
+            }
+        }
+
         public static void BuildBundleDependencies(string bundleName, List<UnityEngine.Object> references)
         {
+            if (!AssetBundleValid(bundleName)) { return; }
+
             foreach (UnityEngine.Object reference in references)
             {
-                if (!bundleTracking.ContainsKey(reference.name.ToLower()))
-                {
-                    bundleTracking[reference.name.ToLower()] = bundleName;
-                    BuildBundleDependencies(bundleName, GetUnityObjectReferences(reference));
-                }
+                BuildBundleDependencies(bundleName, reference);
             }
         }
     }

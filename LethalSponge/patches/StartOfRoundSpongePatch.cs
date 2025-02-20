@@ -21,7 +21,21 @@ namespace Scoops.patches
         [HarmonyPostfix]
         private static void StartOfRound_PassTimeToNextDay(ref StartOfRound __instance)
         {
-            SpongeService.ApplySponge();
+            if (!Config.debugMode.Value)
+            {
+                SpongeService.ApplySponge();
+            }
+        }
+
+        [HarmonyPatch(typeof(HUDManager))]
+        [HarmonyPatch("AddTextToChatOnServer")]
+        [HarmonyPostfix]
+        private static void HUDManager_AddTextToChatOnServer(ref HUDManager __instance, string chatMessage, int playerId)
+        {
+            if (Config.debugMode.Value && chatMessage.ToLower() == "/sponge")
+            {
+                SpongeService.ApplySponge();
+            }
         }
     }
 }
