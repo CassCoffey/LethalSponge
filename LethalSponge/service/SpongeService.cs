@@ -100,6 +100,8 @@ namespace Scoops.service
             {
                 fullReportBundles.AddRange(Config.fullReportList.Value.ToLower().Split(';'));
             }
+
+            enabled = Config.runDaily.Value;
         }
 
         public static bool AssetBundleValid(string bundleName)
