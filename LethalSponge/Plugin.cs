@@ -73,8 +73,10 @@ public class Plugin : BaseUnityPlugin
 
         foreach (AssetBundle bundle in allBundles)
         {
-            StartCoroutine(SpongeService.RegisterAssetBundleStale(bundle, allGameObjects));
+            SpongeService.RegisterAssetBundle(bundle);
         }
+
+        StartCoroutine(SpongeService.CheckAllGameObjectDependencies(allGameObjects));
 
         Plugin.Log.LogMessage("Assetbundle references acquired.");
 
@@ -87,6 +89,11 @@ public class Plugin : BaseUnityPlugin
         if (Scoops.Config.fixFoliageLOD.Value)
         {
             _harmony.PatchAll(typeof(FoliageDetailDistanceSpongePatch));
+        }
+
+        if (Scoops.Config.patchCameraScript.Value)
+        {
+            _harmony.PatchAll(typeof(ManualCameraRendererSpongePatch));
         }
     }
 

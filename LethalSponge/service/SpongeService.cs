@@ -57,6 +57,7 @@ namespace Scoops.service
 
         private static int prevCount = 0;
         private static int initialCount = 0;
+        private static int newCount = 0;
 
         private static readonly List<string> meshReadProperties = new List<string>() { "vertices", "normals", "tangents", "uv", "uv2", "uv3", "uv4", "uv5", "uv6", "uv7", "uv8", "colors", "colors32", "triangles" };
 
@@ -124,7 +125,8 @@ namespace Scoops.service
             {
                 PerformEvaluation();
             }
-            int newCount = Resources.FindObjectsOfTypeAll<UnityEngine.Object>().Length;
+            allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
+            newCount = allObjects.Length;
             Plugin.Log.LogMessage("There are " + newCount + " loaded objects total.");
             if (Config.verboseLogging.Value && (mode == SpongeMode.Evaluate || mode == SpongeMode.Full) && newCount > allObjects.Length)
             {
@@ -136,6 +138,20 @@ namespace Scoops.service
             if (mode == SpongeMode.Clean || mode == SpongeMode.Full)
             {
                 PerformCleanup();
+            }
+        }
+
+        private static void FinishSponge()
+        {
+            if (Config.unloadUnused.Value)
+            {
+                Plugin.Log.LogMessage("Resources.UnloadUnusedAssets() completed.");
+                allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
+                int beforeCleanCount = newCount;
+                newCount = allObjects.Length;
+                Plugin.Log.LogMessage("After cleaning there are " + newCount + " loaded objects total.");
+                Plugin.Log.LogMessage("Resources.UnloadUnusedAssets() cleaned up " + (beforeCleanCount - newCount) + " objects.");
+                allObjects = [];
             }
 
             stopwatch.Stop();
@@ -234,7 +250,14 @@ namespace Scoops.service
             if (Config.unloadUnused.Value)
             {
                 Plugin.Log.LogMessage("Calling Resources.UnloadUnusedAssets().");
-                Resources.UnloadUnusedAssets();
+                Resources.UnloadUnusedAssets().completed += (asyncOperation) =>
+                {
+                    FinishSponge();
+                };
+            } 
+            else
+            {
+                FinishSponge();
             }
         }
 
@@ -403,33 +426,18 @@ namespace Scoops.service
             }
         }
 
-        public static IEnumerator RegisterAssetBundleStale(AssetBundle bundle, GameObject[] allGameObjects)
+        public static IEnumerator CheckAllGameObjectDependencies(GameObject[] allGameObjects)
         {
-            string bundleName = FormatBundleName(bundle.name);
+            List<string> checkedObjects = new List<string>();
 
-            if (bundle.isStreamedSceneAssetBundle)
+            foreach (GameObject obj in allGameObjects)
             {
-                foreach (string scenePath in bundle.GetAllScenePaths())
+                if (!checkedObjects.Contains(obj.name) && obj.transform.parent == null)
                 {
-                    string sceneName = Path.GetFileNameWithoutExtension(scenePath);
-                    streamedSceneTracking.TryAdd(sceneName, bundleName);
-                }
-            }
-            else
-            {
-                foreach (string assetPath in bundle.GetAllAssetNames())
-                {
-                    string assetName = Path.GetFileNameWithoutExtension(assetPath).ToLower();
-                    if (!bundleTracking.ContainsKey(assetName))
+                    if (bundleTracking.TryGetValue(obj.name.ToLower(), out string bundleName))
                     {
-                        bundleTracking.TryAdd(assetName, bundleName);
-
-                        GameObject existingObj = allGameObjects.Where(x => x.name.ToLower() == assetName).FirstOrDefault<GameObject>();
-
-                        if (existingObj != default(GameObject))
-                        {
-                            FindGameObjectDependenciesRecursively(bundleName, existingObj);
-                        }
+                        checkedObjects.Add(obj.name);
+                        FindGameObjectDependenciesRecursively(bundleName, obj);
                     }
                 }
             }

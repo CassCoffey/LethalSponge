@@ -15,6 +15,14 @@ namespace Scoops.patches
         private static void StartOfRound_Start(ref StartOfRound __instance)
         {
             SpongeService.Initialize();
+
+            if (Config.fixCameraSettings.Value)
+            {
+                if (CameraService.Init())
+                {
+                    CameraService.ApplyCameraFixes();
+                }
+            }
         }
 
         [HarmonyPatch("PassTimeToNextDay")]

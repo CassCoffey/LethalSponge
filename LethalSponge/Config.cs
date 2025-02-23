@@ -13,6 +13,8 @@ namespace Scoops
 
         public static ConfigEntry<bool> unloadUnused;
         public static ConfigEntry<bool> fixFoliageLOD;
+        public static ConfigEntry<bool> fixCameraSettings;
+        public static ConfigEntry<bool> patchCameraScript;
 
         public static ConfigEntry<bool> runDaily;
 
@@ -73,6 +75,18 @@ namespace Scoops
                     "fixFoliageLOD",
                     true,
                     "Should Sponge replace the base Lethal Company FoliageDetailDistance script with one that doesn't leak materials? (LethalPerformance has a similar fix as well)"
+            );
+            fixCameraSettings = cfg.Bind(
+                    "Cleanup",
+                    "fixCameraSettings",
+                    true,
+                    "Should Sponge change the settings for the ship cameras and radar cam to improve performance?"
+            );
+            patchCameraScript = cfg.Bind(
+                    "Cleanup",
+                    "patchCameraScript",
+                    true,
+                    "Should Sponge replace the base Lethal Company ManualCameraRenderer.MeetsCameraEnabledConditions function with one that more reliably disables ship cameras when they're not in view?"
             );
 
             // Debug
