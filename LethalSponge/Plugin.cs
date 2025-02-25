@@ -7,6 +7,9 @@ using Scoops.service;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.Rendering;
+using System;
 
 namespace Scoops;
 
@@ -66,6 +69,8 @@ public class Plugin : BaseUnityPlugin
                 LLLCompat.AddBundleHook();
             }
         }
+
+        AlterQualitySettings();
     }
 
     public IEnumerator RegisterAssetBundlesStale()
@@ -103,7 +108,7 @@ public class Plugin : BaseUnityPlugin
             _harmony.PatchAll(typeof(ManualCameraRendererSpongePatch));
         }
 
-        if (Scoops.Config.disableBloom.Value || Scoops.Config.disableDOF.Value || Scoops.Config.disableShadows.Value || Scoops.Config.disableMotionVectors.Value || Scoops.Config.disableRefraction.Value || Scoops.Config.disableReflections.Value || Scoops.Config.useCustomShader.Value)
+        if (Scoops.Config.disableBloom.Value || Scoops.Config.disableDOF.Value || Scoops.Config.disableMotionBlur.Value || Scoops.Config.disableShadows.Value || Scoops.Config.disableMotionVectors.Value || Scoops.Config.disableRefraction.Value || Scoops.Config.disableReflections.Value || Scoops.Config.useCustomShader.Value)
         {
             _harmony.PatchAll(typeof(PlayerControllerBSpongePatch));
         }
@@ -123,5 +128,45 @@ public class Plugin : BaseUnityPlugin
         _harmony.PatchAll(typeof(AssetBundleLoadAsyncSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleLoadMultipleSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleLoadMultipleAsyncSpongePatch));
+    }
+
+    private void AlterQualitySettings()
+    {
+        if (!Scoops.Config.qualityOverrides.Value) return;
+
+        RenderPipelineSettings settings = ((HDRenderPipelineAsset)GraphicsSettings.currentRenderPipeline).currentPlatformRenderPipelineSettings;
+
+        if (Scoops.Config.deferredOnly.Value)
+        {
+            // It might be too late for this to help -_-
+            settings.supportedLitShaderMode = RenderPipelineSettings.SupportedLitShaderMode.DeferredOnly;
+        }
+
+        settings.decalSettings.drawDistance = Scoops.Config.decalDrawDist.Value;
+        settings.decalSettings.atlasHeight = Scoops.Config.decalAtlasSize.Value;
+        settings.decalSettings.atlasWidth = Scoops.Config.decalAtlasSize.Value;
+
+        settings.lightLoopSettings.maxLocalVolumetricFogOnScreen = Scoops.Config.maxVolumetricFog.Value;
+        settings.lightLoopSettings.reflectionProbeTexCacheSize = Enum.Parse<ReflectionProbeTextureCacheResolution>(Scoops.Config.reflectionAtlasSize.Value);
+        settings.lightLoopSettings.maxCubeReflectionOnScreen = Scoops.Config.maxCubeReflectionProbes.Value;
+        settings.lightLoopSettings.maxPlanarReflectionOnScreen = Scoops.Config.maxPlanarReflectionProbes.Value;
+        // disabled until I have a distance based light culling system
+        //settings.lightLoopSettings.maxDirectionalLightsOnScreen = Scoops.Config.maxDirectionalLights.Value;
+        //settings.lightLoopSettings.maxPunctualLightsOnScreen = Scoops.Config.maxPunctualLights.Value;
+        //settings.lightLoopSettings.maxAreaLightsOnScreen = Scoops.Config.maxAreaLights.Value;
+
+        settings.hdShadowInitParams.maxShadowRequests = Scoops.Config.maxShadows.Value;
+        settings.hdShadowInitParams.maxPunctualShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
+        settings.hdShadowInitParams.maxDirectionalShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
+        settings.hdShadowInitParams.maxAreaShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
+        settings.hdShadowInitParams.punctualLightShadowAtlas.shadowAtlasResolution = Scoops.Config.shadowsAtlasSize.Value;
+        settings.hdShadowInitParams.cachedPunctualLightShadowAtlas = Scoops.Config.shadowsAtlasSize.Value / 2; // Just make it half size for now
+        settings.hdShadowInitParams.areaLightShadowAtlas.shadowAtlasResolution = Scoops.Config.shadowsAtlasSize.Value;
+        settings.hdShadowInitParams.cachedAreaLightShadowAtlas = Scoops.Config.shadowsAtlasSize.Value / 2;
+
+        settings.lightingQualitySettings.Fog_Budget[QualitySettings.GetQualityLevel()] = Scoops.Config.fogBudget.Value;
+
+        ((HDRenderPipelineAsset)GraphicsSettings.currentRenderPipeline).m_RenderPipelineSettings = settings;
+        ((HDRenderPipelineAsset)GraphicsSettings.currentRenderPipeline).OnValidate();
     }
 }

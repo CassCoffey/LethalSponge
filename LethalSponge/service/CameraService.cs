@@ -120,7 +120,7 @@ namespace Scoops.service
 
         public static void ApplyPlayerCameraPatch(PlayerControllerB player)
         {
-            if (Config.disableBloom.Value || Config.disableDOF.Value || Config.disableShadows.Value || Config.disableMotionVectors.Value || Config.disableRefraction.Value || Config.disableReflections.Value)
+            if (Config.disableBloom.Value || Config.disableDOF.Value || Config.disableMotionBlur.Value || Config.disableShadows.Value || Config.disableMotionVectors.Value || Config.disableRefraction.Value || Config.disableReflections.Value)
             {
                 SetPlayerOverrides(player.gameplayCamera);
             }
@@ -209,6 +209,11 @@ namespace Scoops.service
                 hdCameraData.DisableHDField(FrameSettingsField.DepthOfField);
             }
 
+            if (Config.disableMotionBlur.Value)
+            {
+                hdCameraData.DisableHDField(FrameSettingsField.MotionBlur);
+            }
+
             if (Config.disableShadows.Value)
             {
                 hdCameraData.DisableHDField(FrameSettingsField.ShadowMaps);
@@ -252,7 +257,6 @@ namespace Scoops.service
             //hdCameraData.DisableHDField(FrameSettingsField.CustomPostProcess);
             //hdCameraData.DisableHDField(FrameSettingsField.CustomPass);
             //hdCameraData.DisableHDField(FrameSettingsField.StopNaN);
-            //hdCameraData.DisableHDField(FrameSettingsField.MotionBlur);
             //hdCameraData.DisableHDField(FrameSettingsField.PaniniProjection);
             //hdCameraData.DisableHDField(FrameSettingsField.LensDistortion);
             //hdCameraData.DisableHDField(FrameSettingsField.ChromaticAberration);

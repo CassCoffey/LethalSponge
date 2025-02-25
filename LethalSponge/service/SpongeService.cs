@@ -241,8 +241,8 @@ namespace Scoops.service
                 }
             }
             Plugin.Log.LogMessage("The above counts may be inaccurate, use them as approximations. Objects can be attributed to the wrong bundle/scene in the case of overlapping names.");
-            Plugin.Log.LogMessage("Remember that Meshes, Textures, and Materials should be cleaned up manually. Objects with no native unity references will likely be cleaned up by UnloadUnusedAssets.");
-            Plugin.Log.LogMessage("Unwanted GameObjects will not be cleaned up automatically. Large amounts of GameObjects can be fine, but if these increase day over day there may be an issue.");
+            Plugin.Log.LogMessage("Remember that Meshes, Textures, and Materials should be cleaned up manually, but if they have no native unity references they will be cleaned up by UnloadUnusedAssets.");
+            Plugin.Log.LogMessage("Unwanted GameObjects will never be cleaned up automatically. Large amounts of GameObjects can be fine, but if these increase day over day there may be an issue.");
         }
 
         private static void PerformCleanup()
