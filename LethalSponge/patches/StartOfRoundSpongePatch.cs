@@ -70,13 +70,6 @@ namespace Scoops.patches
                 return false;
             }
 
-            if (chatMessage.ToLower() == "/sponge shader")
-            {
-                Plugin.Log.LogMessage("Toggling Sponge shader.");
-                CameraService.ToggleVolumes();
-                return false;
-            }
-
             return true;
         }
     }

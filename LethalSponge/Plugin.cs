@@ -102,12 +102,15 @@ public class Plugin : BaseUnityPlugin
             _harmony.PatchAll(typeof(ManualCameraRendererSpongePatch));
         }
 
-        if (Scoops.Config.potatoCompany.Value || Scoops.Config.useCustomShader.Value)
+        if (Scoops.Config.disableBloom.Value || Scoops.Config.disableDOF.Value || Scoops.Config.disableShadows.Value || Scoops.Config.disableMotionVectors.Value || Scoops.Config.disableRefraction.Value || Scoops.Config.disableReflections.Value || Scoops.Config.useCustomShader.Value)
         {
             _harmony.PatchAll(typeof(PlayerControllerBSpongePatch));
         }
 
-        _harmony.PatchAll(typeof(HDRenderPipeline_RecordRenderGraph_Patch));
+        if (Scoops.Config.useCustomShader.Value)
+        {
+            _harmony.PatchAll(typeof(HDRenderPipeline_RecordRenderGraph_Patch));
+        }
     }
 
     private void ApplyVerbosePluginPatch()

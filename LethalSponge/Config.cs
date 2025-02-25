@@ -13,14 +13,20 @@ namespace Scoops
 
         public static ConfigEntry<bool> unloadUnused;
         public static ConfigEntry<bool> fixFoliageLOD;
-        public static ConfigEntry<bool> removePosterizationShader;
-        public static ConfigEntry<bool> useCustomShader;
 
         public static ConfigEntry<bool> fixCameraSettings;
         public static ConfigEntry<bool> patchCameraScript;
-        public static ConfigEntry<bool> potatoCompany;
         public static ConfigEntry<int> mapCameraFramerate;
         public static ConfigEntry<int> securityCameraFramerate;
+
+        public static ConfigEntry<bool> removePosterizationShader;
+        public static ConfigEntry<bool> useCustomShader;
+        public static ConfigEntry<bool> disableDOF;
+        public static ConfigEntry<bool> disableBloom;
+        public static ConfigEntry<bool> disableShadows;
+        public static ConfigEntry<bool> disableReflections;
+        public static ConfigEntry<bool> disableMotionVectors;
+        public static ConfigEntry<bool> disableRefraction;
 
         public static ConfigEntry<bool> runDaily;
 
@@ -82,18 +88,6 @@ namespace Scoops
                     true,
                     "Should Sponge replace the base Lethal Company FoliageDetailDistance script with one that doesn't leak materials? (LethalPerformance has a similar fix as well)"
             );
-            removePosterizationShader = cfg.Bind(
-                    "Cleanup",
-                    "removePosterizationShader",
-                    true,
-                    "Should Sponge remove the expensive posterization + outline custom pass to save processing power?"
-            );
-            useCustomShader = cfg.Bind(
-                    "Cleanup",
-                    "useCustomShader",
-                    true,
-                    "Should Sponge replace the removed shader with a faster one that looks similar? (Requires removePosterizationShader = true)"
-            );
 
             // Cameras
             fixCameraSettings = cfg.Bind(
@@ -108,12 +102,6 @@ namespace Scoops
                     true,
                     "Should Sponge replace the base Lethal Company ManualCameraRenderer.MeetsCameraEnabledConditions function with one that more reliably disables ship cameras when they're not in view?"
             );
-            potatoCompany = cfg.Bind(
-                    "Cameras",
-                    "potatoCompany",
-                    false,
-                    "Disable every non-essential player camera shader? (Requires alterPlayerCameraSettings = true)"
-            );
             securityCameraFramerate = cfg.Bind(
                     "Cameras",
                     "securityCameraFramerate",
@@ -125,6 +113,56 @@ namespace Scoops
                     "mapCameraFramerate",
                     15,
                     "What framerate should the radar map camera run at? (Requires fixCameraSettings = true)"
+            );
+
+            // Rendering
+            removePosterizationShader = cfg.Bind(
+                "Rendering",
+                "removePosterizationShader",
+                true,
+                "Should Sponge remove the expensive posterization + outline custom pass to save processing power?"
+            );
+            useCustomShader = cfg.Bind(
+                "Rendering",
+                "useCustomShader",
+                true,
+                "Should Sponge replace the removed shader with a faster one that looks similar? (Requires removePosterizationShader = true)"
+            );
+            disableDOF = cfg.Bind(
+                "Rendering",
+                "disableDOF",
+                false,
+                "Should Sponge disable Depth of Field on the player camera?"
+            );
+            disableBloom = cfg.Bind(
+                "Rendering",
+                "disableBloom",
+                false,
+                "Should Sponge disable Bloom on the player camera?"
+            );
+            disableShadows = cfg.Bind(
+                "Rendering",
+                "disableShadows",
+                false,
+                "Should Sponge disable Shadows on the player camera?"
+            );
+            disableReflections = cfg.Bind(
+                "Rendering",
+                "disableReflections",
+                false,
+                "Should Sponge disable Reflections on the player camera?"
+            );
+            disableMotionVectors = cfg.Bind(
+                "Rendering",
+                "disableReflections",
+                false,
+                "Should Sponge disable MotionVectors on the player camera?"
+            );
+            disableRefraction = cfg.Bind(
+                "Rendering",
+                "disableReflections",
+                false,
+                "Should Sponge disable Refraction on the player camera?"
             );
 
             // Debug

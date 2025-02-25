@@ -11,7 +11,6 @@ namespace Scoops.patches
 {
     [HarmonyPatch(typeof(HDRenderPipeline))]
     [HarmonyPatch("RecordRenderGraph")]
-    [HarmonyDebug]
     public static class HDRenderPipeline_RecordRenderGraph_Patch
     {
         static readonly List<CodeInstruction> instructionsToInsert = new List<CodeInstruction>() {

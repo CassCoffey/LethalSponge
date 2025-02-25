@@ -1,5 +1,4 @@
 ﻿using GameNetcodeStuff;
-using Scoops.rendering;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +7,6 @@ using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
-using static UnityEngine.GraphicsBuffer;
 
 namespace Scoops.service
 {
@@ -25,16 +23,6 @@ namespace Scoops.service
 
         public static GameObject oldVolume;
         public static GameObject newVolume;
-        public static GameObject volumetricMainVolume;
-        public static GameObject volumetricSubVolume;
-        public static GameObject volumetricFinalVolume;
-
-        public static RTHandle volumetricOverlay;
-        public static RTHandle shadowMapAtlas;
-
-        public static MainCamDepthCopy mainCamDepthPass;
-        public static VolumetricCamDepthWrite volumetricCamDepthPass;
-        public static VolumetricCamOverlay volumetricCamOverlayPass;
 
         public static bool Init()
         {
@@ -96,31 +84,17 @@ namespace Scoops.service
         public static void DisablePosterization()
         {
             oldVolume = GameObject.Find("CustomPass");
-            oldVolume.SetActive(false);
 
             if (Config.useCustomShader.Value)
             {
-                volumetricOverlay = RTHandles.Alloc(860, 520, depthBufferBits: DepthBits.None, colorFormat: GraphicsFormat.R8G8B8A8_SRGB, dimension: TextureDimension.Tex2D, name: "VolumetricOverlay");
-                shadowMapAtlas = RTHandles.Alloc(4096, 4096, depthBufferBits: DepthBits.Depth32, dimension: TextureDimension.Tex2D, name: "Shadow_Map_Atlas_Copy");
-
                 // The old switcharoo
                 newVolume = GameObject.Instantiate((GameObject)Plugin.SpongeAssets.LoadAsset("SpongeCustomPass"), oldVolume.transform.parent);
-
-                volumetricMainVolume = newVolume.transform.Find("CustomVolumetricPassMain").gameObject;
-                volumetricSubVolume = newVolume.transform.Find("CustomVolumetricPassSub").gameObject;
-                volumetricFinalVolume = newVolume.transform.Find("CustomVolumetricPassFinal").gameObject;
-
+                
+                // here we use the new injection point added by the transpiler
                 newVolume.GetComponent<CustomPassVolume>().injectionPoint = (CustomPassInjectionPoint)7;
             }
-        }
 
-        public static void ToggleVolumes()
-        {
-            oldVolume.SetActive(!oldVolume.activeSelf);
-            if (newVolume)
-            {
-                newVolume.SetActive(!newVolume.activeSelf);
-            }
+            GameObject.Destroy(oldVolume);
         }
 
         public static void ApplyCameraFixes()
@@ -146,10 +120,14 @@ namespace Scoops.service
 
         public static void ApplyPlayerCameraPatch(PlayerControllerB player)
         {
-            SetPlayerOverrides(player.gameplayCamera, Config.potatoCompany.Value);
+            if (Config.disableBloom.Value || Config.disableDOF.Value || Config.disableShadows.Value || Config.disableMotionVectors.Value || Config.disableRefraction.Value || Config.disableReflections.Value)
+            {
+                SetPlayerOverrides(player.gameplayCamera);
+            }
 
             if (Config.useCustomShader.Value)
             {
+                HDAdditionalCameraData hdCameraData = player.gameplayCamera.GetComponent<HDAdditionalCameraData>();
                 newVolume.GetComponent<CustomPassVolume>().targetCamera = player.gameplayCamera;
             }
         }
@@ -217,52 +195,80 @@ namespace Scoops.service
             HDAdditionalCameraData hdCameraData = camera.GetComponent<HDAdditionalCameraData>();
             hdCameraData.customRenderingSettings = true;
 
-            //hdCameraData.DisableHDField(FrameSettingsField.Volumetrics);
-
-            // only potatoes beyond this point
-            if (!potato) return;
-            hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.MSAAMode] = true;
-            hdCameraData.renderingPathCustomFrameSettings.msaaMode = MSAAMode.None;
-            hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.MaterialQualityLevel] = true;
-            hdCameraData.renderingPathCustomFrameSettings.materialQuality = MaterialQuality.Low;
-            hdCameraData.DisableHDField(FrameSettingsField.Decals);
-            hdCameraData.DisableHDField(FrameSettingsField.TransparentPrepass);
-            hdCameraData.DisableHDField(FrameSettingsField.TransparentPostpass);
-            hdCameraData.DisableHDField(FrameSettingsField.RayTracing);
-            hdCameraData.DisableHDField(FrameSettingsField.MotionVectors);
-            hdCameraData.DisableHDField(FrameSettingsField.Refraction);
-            hdCameraData.DisableHDField(FrameSettingsField.Distortion);
             hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.Postprocess] = true;
-            hdCameraData.DisableHDField(FrameSettingsField.CustomPostProcess);
-            hdCameraData.DisableHDField(FrameSettingsField.CustomPass);
-            hdCameraData.DisableHDField(FrameSettingsField.StopNaN);
-            hdCameraData.DisableHDField(FrameSettingsField.DepthOfField);
-            hdCameraData.DisableHDField(FrameSettingsField.MotionBlur);
-            hdCameraData.DisableHDField(FrameSettingsField.PaniniProjection);
-            hdCameraData.DisableHDField(FrameSettingsField.Bloom);
-            hdCameraData.DisableHDField(FrameSettingsField.LensDistortion);
-            hdCameraData.DisableHDField(FrameSettingsField.ChromaticAberration);
-            hdCameraData.DisableHDField(FrameSettingsField.Vignette);
-            hdCameraData.DisableHDField(FrameSettingsField.FilmGrain);
-            hdCameraData.DisableHDField(FrameSettingsField.Dithering);
-            hdCameraData.DisableHDField(FrameSettingsField.Antialiasing);
-            hdCameraData.DisableHDField(FrameSettingsField.LensFlareDataDriven);
-            hdCameraData.DisableHDField(FrameSettingsField.AfterPostprocess);
-            hdCameraData.DisableHDField(FrameSettingsField.VirtualTexturing);
-            hdCameraData.DisableHDField(FrameSettingsField.Water);
-            hdCameraData.DisableHDField(FrameSettingsField.ShadowMaps);
-            hdCameraData.DisableHDField(FrameSettingsField.ContactShadows);
-            hdCameraData.DisableHDField(FrameSettingsField.ProbeVolume);
-            hdCameraData.DisableHDField(FrameSettingsField.ScreenSpaceShadows);
-            hdCameraData.DisableHDField(FrameSettingsField.SSR);
-            hdCameraData.DisableHDField(FrameSettingsField.SSGI);
-            hdCameraData.DisableHDField(FrameSettingsField.SSAO);
-            hdCameraData.DisableHDField(FrameSettingsField.Transmission);
-            hdCameraData.DisableHDField(FrameSettingsField.ReflectionProbe);
-            hdCameraData.DisableHDField(FrameSettingsField.PlanarProbe);
-            hdCameraData.DisableHDField(FrameSettingsField.SkyReflection);
-            hdCameraData.DisableHDField(FrameSettingsField.SubsurfaceScattering);
-            hdCameraData.DisableHDField(FrameSettingsField.VolumetricClouds);
+
+            if (Config.disableBloom.Value)
+            {
+                hdCameraData.DisableHDField(FrameSettingsField.Bloom);
+            }
+
+            if (Config.disableDOF.Value)
+            {
+                hdCameraData.DisableHDField(FrameSettingsField.DepthOfField);
+            }
+
+            if (Config.disableShadows.Value)
+            {
+                hdCameraData.DisableHDField(FrameSettingsField.ShadowMaps);
+                hdCameraData.DisableHDField(FrameSettingsField.ContactShadows);
+                hdCameraData.DisableHDField(FrameSettingsField.ScreenSpaceShadows);
+            }
+
+            if (Config.disableReflections.Value)
+            {
+                hdCameraData.DisableHDField(FrameSettingsField.ReflectionProbe);
+                hdCameraData.DisableHDField(FrameSettingsField.PlanarProbe);
+                hdCameraData.DisableHDField(FrameSettingsField.SkyReflection);
+                hdCameraData.DisableHDField(FrameSettingsField.SSR);
+                hdCameraData.DisableHDField(FrameSettingsField.TransparentSSR);
+            }
+
+            if (Config.disableMotionVectors.Value)
+            {
+                hdCameraData.DisableHDField(FrameSettingsField.MotionVectors);
+                hdCameraData.DisableHDField(FrameSettingsField.ObjectMotionVectors);
+                hdCameraData.DisableHDField(FrameSettingsField.TransparentsWriteMotionVector);
+            }
+
+            if (Config.disableRefraction.Value)
+            {
+                hdCameraData.DisableHDField(FrameSettingsField.Refraction);
+            }
+
+            // Keeping these here as reference
+
+            //hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.MSAAMode] = true;
+            //hdCameraData.renderingPathCustomFrameSettings.msaaMode = MSAAMode.None;
+            //hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.MaterialQualityLevel] = true;
+            //hdCameraData.renderingPathCustomFrameSettings.materialQuality = MaterialQuality.Low;
+            //hdCameraData.DisableHDField(FrameSettingsField.Decals);
+            //hdCameraData.DisableHDField(FrameSettingsField.TransparentPrepass);
+            //hdCameraData.DisableHDField(FrameSettingsField.TransparentPostpass);
+            //hdCameraData.DisableHDField(FrameSettingsField.RayTracing);
+            //hdCameraData.DisableHDField(FrameSettingsField.Distortion);
+            //hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.Postprocess] = true;
+            //hdCameraData.DisableHDField(FrameSettingsField.CustomPostProcess);
+            //hdCameraData.DisableHDField(FrameSettingsField.CustomPass);
+            //hdCameraData.DisableHDField(FrameSettingsField.StopNaN);
+            //hdCameraData.DisableHDField(FrameSettingsField.MotionBlur);
+            //hdCameraData.DisableHDField(FrameSettingsField.PaniniProjection);
+            //hdCameraData.DisableHDField(FrameSettingsField.LensDistortion);
+            //hdCameraData.DisableHDField(FrameSettingsField.ChromaticAberration);
+            //hdCameraData.DisableHDField(FrameSettingsField.Vignette);
+            //hdCameraData.DisableHDField(FrameSettingsField.FilmGrain);
+            //hdCameraData.DisableHDField(FrameSettingsField.Dithering);
+            //hdCameraData.DisableHDField(FrameSettingsField.Antialiasing);
+            //hdCameraData.DisableHDField(FrameSettingsField.LensFlareDataDriven);
+            //hdCameraData.DisableHDField(FrameSettingsField.AfterPostprocess);
+            //hdCameraData.DisableHDField(FrameSettingsField.Volumetrics);
+            //hdCameraData.DisableHDField(FrameSettingsField.VirtualTexturing);
+            //hdCameraData.DisableHDField(FrameSettingsField.Water);
+            //hdCameraData.DisableHDField(FrameSettingsField.ProbeVolume);
+            //hdCameraData.DisableHDField(FrameSettingsField.SSGI);
+            //hdCameraData.DisableHDField(FrameSettingsField.SSAO);
+            //hdCameraData.DisableHDField(FrameSettingsField.Transmission);
+            //hdCameraData.DisableHDField(FrameSettingsField.SubsurfaceScattering);
+            //hdCameraData.DisableHDField(FrameSettingsField.VolumetricClouds);
         }
 
         private static void DisableHDField(this HDAdditionalCameraData data, FrameSettingsField field)
