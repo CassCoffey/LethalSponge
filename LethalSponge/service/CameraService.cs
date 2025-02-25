@@ -130,6 +130,8 @@ namespace Scoops.service
                 HDAdditionalCameraData hdCameraData = player.gameplayCamera.GetComponent<HDAdditionalCameraData>();
                 newVolume.GetComponent<CustomPassVolume>().targetCamera = player.gameplayCamera;
             }
+
+            Plugin.Log.LogMessage("Player camera patched.");
         }
 
         private static void SetOverrides(Camera camera, bool mapCamera = false)

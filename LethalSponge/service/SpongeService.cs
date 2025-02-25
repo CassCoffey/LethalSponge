@@ -229,7 +229,7 @@ namespace Scoops.service
                 foreach (string assetType in tracker.objectCount.Keys)
                 {
                     int newObjectCount = tracker.objectCount[assetType];
-                    Plugin.Log.LogMessage(" - " + newObjectCount + " " + assetType + ".");
+                    Plugin.Log.LogMessage(" - " + newObjectCount + " " + (Config.ignoreInactiveObjects.Value ? "Active " : "") + assetType + ".");
                     if (prev && previousTracker.objectCount.ContainsKey(assetType))
                     {
                         int prevObjectCount = previousTracker.objectCount[assetType];
@@ -319,7 +319,7 @@ namespace Scoops.service
 
                 if (fullReportBundles.Contains(bundle.ToLower()))
                 {
-                    Plugin.Log.LogMessage("Counted " + countedType + " with name '" + allType[i].name + "' and ID '" + allType[i].GetInstanceID() + "' from bundle/scene " + bundle + ".");
+                    Plugin.Log.LogMessage("Counted " + (Config.ignoreInactiveObjects.Value ? "Active " : "") + countedType + " with name '" + allType[i].name + "' and ID '" + allType[i].GetInstanceID() + "' from bundle/scene " + bundle + ".");
                 }
 
                 typeCount++;
@@ -340,7 +340,7 @@ namespace Scoops.service
 
             if (typeCount > 0)
             {
-                Plugin.Log.LogMessage("Found " + typeCount + " " + typeof(T).Name + ".");
+                Plugin.Log.LogMessage("Found " + typeCount + " " + (Config.ignoreInactiveObjects.Value ? "Active " : "") + typeof(T).Name + ".");
             }
 
             return typeCount;

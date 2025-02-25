@@ -45,20 +45,32 @@ namespace Scoops.patches
         [HarmonyPrefix]
         private static bool HUDManager_AddTextToChatOnServer(ref HUDManager __instance, string chatMessage, int playerId)
         {
+            if (chatMessage.ToLower() == "/sponge help")
+            {
+                __instance.AddChatMessage("'/sponge': run Sponge.\n" +
+                    "'/sponge evaluate': run Sponge Evaluation only.\n" +
+                    "'/sponge clean': run Sponge Cleanup only.\n" +
+                    "'/sponge toggle': toggle Sponge daily auto activate.\n");
+                return false;
+            }
+
             if (chatMessage.ToLower() == "/sponge")
             {
+                __instance.AddChatMessage("Applying Sponge.");
                 SpongeService.ApplySponge();
                 return false;
             }
 
             if (chatMessage.ToLower() == "/sponge evaluate")
             {
+                __instance.AddChatMessage("Applying Sponge evaluate.");
                 SpongeService.ApplySponge(SpongeMode.Evaluate);
                 return false;
             }
 
             if (chatMessage.ToLower() == "/sponge clean")
             {
+                __instance.AddChatMessage("Applying Sponge cleanup.");
                 SpongeService.ApplySponge(SpongeMode.Clean);
                 return false;
             }
@@ -66,6 +78,7 @@ namespace Scoops.patches
             if (chatMessage.ToLower() == "/sponge toggle")
             {
                 Plugin.Log.LogMessage((SpongeService.enabled ? "Disabling" : "Enabling") + " Sponge daily automatic activation.");
+                __instance.AddChatMessage((SpongeService.enabled ? "Disabling" : "Enabling") + " Sponge daily automatic activation.");
                 SpongeService.enabled = !SpongeService.enabled;
                 return false;
             }
