@@ -29,7 +29,8 @@ namespace Scoops.service
         public static GameObject volumetricSubVolume;
         public static GameObject volumetricFinalVolume;
 
-        public static RenderTexture volumetricOverlay;
+        public static RTHandle volumetricOverlay;
+        public static RTHandle shadowMapAtlas;
 
         public static MainCamDepthCopy mainCamDepthPass;
         public static VolumetricCamDepthWrite volumetricCamDepthPass;
@@ -99,6 +100,9 @@ namespace Scoops.service
 
             if (Config.useCustomShader.Value)
             {
+                volumetricOverlay = RTHandles.Alloc(860, 520, depthBufferBits: DepthBits.None, colorFormat: GraphicsFormat.R8G8B8A8_SRGB, dimension: TextureDimension.Tex2D, name: "VolumetricOverlay");
+                shadowMapAtlas = RTHandles.Alloc(4096, 4096, depthBufferBits: DepthBits.Depth32, dimension: TextureDimension.Tex2D, name: "Shadow_Map_Atlas_Copy");
+
                 // The old switcharoo
                 newVolume = GameObject.Instantiate((GameObject)Plugin.SpongeAssets.LoadAsset("SpongeCustomPass"), oldVolume.transform.parent);
 
@@ -106,22 +110,7 @@ namespace Scoops.service
                 volumetricSubVolume = newVolume.transform.Find("CustomVolumetricPassSub").gameObject;
                 volumetricFinalVolume = newVolume.transform.Find("CustomVolumetricPassFinal").gameObject;
 
-                volumetricOverlay = new RenderTexture(860, 520, 0, RenderTextureFormat.Default, 0);
-
-                mainCamDepthPass = (MainCamDepthCopy)volumetricMainVolume.GetComponent<CustomPassVolume>().AddPassOfType<MainCamDepthCopy>();
-                mainCamDepthPass.targetDepthBuffer = CustomPass.TargetBuffer.Custom;
-                mainCamDepthPass.targetColorBuffer = CustomPass.TargetBuffer.None;
-                mainCamDepthPass.clearFlags = ClearFlag.None;
-
-                volumetricCamDepthPass = (VolumetricCamDepthWrite)volumetricSubVolume.GetComponent<CustomPassVolume>().AddPassOfType<VolumetricCamDepthWrite>();
-                volumetricCamDepthPass.targetDepthBuffer = CustomPass.TargetBuffer.Camera;
-                volumetricCamDepthPass.targetColorBuffer = CustomPass.TargetBuffer.None;
-                volumetricCamDepthPass.clearFlags = ClearFlag.None;
-
-                volumetricCamOverlayPass = (VolumetricCamOverlay)volumetricFinalVolume.GetComponent<CustomPassVolume>().AddPassOfType<VolumetricCamOverlay>();
-                volumetricCamOverlayPass.targetDepthBuffer = CustomPass.TargetBuffer.None;
-                volumetricCamOverlayPass.targetColorBuffer = CustomPass.TargetBuffer.None;
-                volumetricCamOverlayPass.clearFlags = ClearFlag.None;
+                newVolume.GetComponent<CustomPassVolume>().injectionPoint = (CustomPassInjectionPoint)7;
             }
         }
 
@@ -159,22 +148,9 @@ namespace Scoops.service
         {
             SetPlayerOverrides(player.gameplayCamera, Config.potatoCompany.Value);
 
-            // we need a fog camera to avoid rendering the new shader effect on fog
             if (Config.useCustomShader.Value)
             {
-                Camera fogCamera = GameObject.Instantiate((GameObject)Plugin.SpongeAssets.LoadAsset("FogCamera"), player.gameplayCamera.transform).GetComponent<Camera>();
-
                 newVolume.GetComponent<CustomPassVolume>().targetCamera = player.gameplayCamera;
-                volumetricMainVolume.GetComponent<CustomPassVolume>().targetCamera = player.gameplayCamera;
-                volumetricSubVolume.GetComponent<CustomPassVolume>().targetCamera = fogCamera;
-                volumetricFinalVolume.GetComponent<CustomPassVolume>().targetCamera = fogCamera;
-
-                fogCamera.clearFlags = CameraClearFlags.Nothing;
-                fogCamera.depthTextureMode = DepthTextureMode.Depth;
-                fogCamera.targetTexture = volumetricOverlay;
-
-                volumetricCamOverlayPass.mainRT = player.gameplayCamera.targetTexture;
-                volumetricCamOverlayPass.volumetricRT = volumetricOverlay;
             }
         }
 
@@ -241,7 +217,7 @@ namespace Scoops.service
             HDAdditionalCameraData hdCameraData = camera.GetComponent<HDAdditionalCameraData>();
             hdCameraData.customRenderingSettings = true;
 
-            hdCameraData.DisableHDField(FrameSettingsField.Volumetrics);
+            //hdCameraData.DisableHDField(FrameSettingsField.Volumetrics);
 
             // only potatoes beyond this point
             if (!potato) return;

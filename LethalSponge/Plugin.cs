@@ -106,6 +106,8 @@ public class Plugin : BaseUnityPlugin
         {
             _harmony.PatchAll(typeof(PlayerControllerBSpongePatch));
         }
+
+        _harmony.PatchAll(typeof(HDRenderPipeline_RecordRenderGraph_Patch));
     }
 
     private void ApplyVerbosePluginPatch()
