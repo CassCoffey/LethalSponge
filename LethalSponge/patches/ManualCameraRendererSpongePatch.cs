@@ -2,36 +2,69 @@
 using HarmonyLib;
 using Scoops.service;
 using System.Linq;
+using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Scoops.patches
 {
     [HarmonyPatch(typeof(ManualCameraRenderer))]
     public class ManualCameraRendererSpongePatch
     {
-        [HarmonyPatch("MeetsCameraEnabledConditions")]
-        [HarmonyPrefix]
-        private static bool ManualCameraRenderer_MeetsCameraEnabledConditions(ref ManualCameraRenderer __instance, ref bool __result, PlayerControllerB player)
+        [HarmonyPatch("Update")]
+        [HarmonyPostfix]
+        private static void ManualCameraRenderer_Update(ref ManualCameraRenderer __instance)
         {
-            if (__instance.currentCameraDisabled)
+            if (GameNetworkManager.Instance.localPlayerController == null || NetworkManager.Singleton == null)
             {
-                __result = false;
-                return false;
+                return;
             }
-            if (__instance.mesh != null && player != null && !MeshVisible(player.gameplayCamera, __instance.mesh))
+            // While the camera is overridden it runs at full framerate, we need to stop that
+            if (__instance.overrideCameraForOtherUse)
             {
-                __result = false;
-                return false;
+                if (__instance.mesh != null && !MeshVisible(GameNetworkManager.Instance.localPlayerController.gameplayCamera, __instance.mesh))
+                {
+                    __instance.cam.enabled = false;
+                    return;
+                }
+
+                // Just gonna redo this for now, might make it a transpiler later
+                if (__instance.renderAtLowerFramerate)
+                {
+                    __instance.cam.enabled = false;
+                    __instance.elapsed += Time.deltaTime;
+                    if (__instance.elapsed > 1f / __instance.fps)
+                    {
+                        __instance.elapsed = 0f;
+                        __instance.cam.Render();
+                    }
+                }
+                else
+                {
+                    __instance.cam.enabled = true;
+                }
             }
-            if (!StartOfRound.Instance.inShipPhase && (!player.isInHangarShipRoom || (!StartOfRound.Instance.shipDoorsEnabled && (StartOfRound.Instance.currentPlanetPrefab == null || !StartOfRound.Instance.currentPlanetPrefab.activeSelf))))
+        }
+
+        [HarmonyPatch("MeetsCameraEnabledConditions")]
+        [HarmonyAfter(["Zaggy1024.OpenBodyCams"])]
+        [HarmonyPostfix]
+        private static void ManualCameraRenderer_MeetsCameraEnabledConditions(ref ManualCameraRenderer __instance, ref bool __result, PlayerControllerB player)
+        {
+            // Recheck the mesh visibility but with a working check 
+            if (__instance.mesh != null && !MeshVisible(player.gameplayCamera, __instance.mesh))
             {
                 __result = false;
-                return false;
             }
 
-            __result = true;
-            return false;
+            if (__instance == StartOfRound.Instance.mapScreen)
+            {
+                if (__result || CameraService.MainTerminal == null) return;
+
+                if (CameraService.MainTerminal.displayingPersistentImage == __instance.mapCamera.activeTexture && CameraService.MainTerminal.terminalUIScreen.isActiveAndEnabled)
+                {
+                    __result = true;
+                }
+            }
         }
 
         private static bool MeshVisible(Camera camera, MeshRenderer mesh)

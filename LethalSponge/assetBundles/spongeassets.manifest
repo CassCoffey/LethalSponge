@@ -1,0 +1,54 @@
+ManifestFileVersion: 0
+CRC: 2779789330
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 09c19aa7c4930d323d846619cdf0834d
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 001fda0d0c97900372d78729f0647dd3
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 09c19aa7c4930d323d846619cdf0834d
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 20
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 86
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: 23c1ce4fb46143f46bc5cb5224c934f6, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 26d6499a6bd256e47b859377446493a1, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers:
+- AssemblyName: Unity.RenderPipelines.Core.Runtime
+  ClassName: UnityEngine.Rendering.BitArray128
+- AssemblyName: Unity.RenderPipelines.HighDefinition.Runtime
+  ClassName: UnityEngine.Rendering.HighDefinition.FrameSettings
+- AssemblyName: Unity.RenderPipelines.HighDefinition.Runtime
+  ClassName: UnityEngine.Rendering.HighDefinition.FrameSettingsOverrideMask
+- AssemblyName: Unity.RenderPipelines.HighDefinition.Runtime
+  ClassName: UnityEngine.Rendering.HighDefinition.FullScreenCustomPass
+- AssemblyName: Unity.RenderPipelines.HighDefinition.Runtime
+  ClassName: UnityEngine.Rendering.HighDefinition.HDPhysicalCamera
+- AssemblyName: Unity.RenderPipelines.HighDefinition.Runtime
+  ClassName: UnityEngine.Rendering.HighDefinition.ObsoleteFrameSettings
+- AssemblyName: Unity.RenderPipelines.HighDefinition.Runtime
+  ClassName: UnityEngine.Rendering.HighDefinition.ObsoleteLightLoopSettings
+Assets:
+- Assets/Sponge/SpongeVolumetricPass.shader
+- Assets/Sponge/FullScreen_SpongeVolumetricPass.mat
+- Assets/Sponge/DepthCopyRT.asset
+- Assets/Sponge/SpongeCustomPass.prefab
+- Assets/Sponge/FogCamera.prefab
+Dependencies: []

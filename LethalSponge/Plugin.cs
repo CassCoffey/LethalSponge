@@ -25,6 +25,8 @@ public class Plugin : BaseUnityPlugin
 
     public static Config SpongeConfig { get; internal set; }
 
+    public static AssetBundle SpongeAssets;
+
     public static ManualLogSource Log => Instance.Logger;
 
     private readonly Harmony _harmony = new(PluginInformation.PLUGIN_GUID);
@@ -37,6 +39,10 @@ public class Plugin : BaseUnityPlugin
     private void Awake()
     {
         Log.LogInfo("Loading LethalSponge Version " + PluginInformation.PLUGIN_VERSION);
+
+        var dllFolderPath = System.IO.Path.GetDirectoryName(Info.Location);
+        var assetBundleFilePath = System.IO.Path.Combine(dllFolderPath, "spongeassets");
+        SpongeAssets = AssetBundle.LoadFromFile(assetBundleFilePath);
 
         SpongeConfig = new(base.Config);
 
@@ -94,6 +100,11 @@ public class Plugin : BaseUnityPlugin
         if (Scoops.Config.patchCameraScript.Value)
         {
             _harmony.PatchAll(typeof(ManualCameraRendererSpongePatch));
+        }
+
+        if (Scoops.Config.potatoCompany.Value || Scoops.Config.useCustomShader.Value)
+        {
+            _harmony.PatchAll(typeof(PlayerControllerBSpongePatch));
         }
     }
 

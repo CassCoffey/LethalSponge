@@ -23,6 +23,11 @@ namespace Scoops.patches
                     CameraService.ApplyCameraFixes();
                 }
             }
+
+            if (Config.removePosterizationShader.Value)
+            {
+                CameraService.DisablePosterization();
+            }
         }
 
         [HarmonyPatch("PassTimeToNextDay")]
@@ -62,6 +67,13 @@ namespace Scoops.patches
             {
                 Plugin.Log.LogMessage((SpongeService.enabled ? "Disabling" : "Enabling") + " Sponge daily automatic activation.");
                 SpongeService.enabled = !SpongeService.enabled;
+                return false;
+            }
+
+            if (chatMessage.ToLower() == "/sponge shader")
+            {
+                Plugin.Log.LogMessage("Toggling Sponge shader.");
+                CameraService.ToggleVolumes();
                 return false;
             }
 
