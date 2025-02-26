@@ -250,12 +250,6 @@ namespace Scoops
             //    16,
             //    new ConfigDescription("How many Area Lights should be able to be on screen at once? (LC default is 64)", new AcceptableValueRange<int>(4, 64))
             //);
-            maxShadows = cfg.Bind(
-                "Graphics Quality",
-                "maxShadows",
-                64,
-                new ConfigDescription("How many Shadows should be able to be on screen at once? (LC default is 128)", new AcceptableValueRange<int>(16, 128))
-            );
             shadowsMaxResolution = cfg.Bind(
                 "Graphics Quality",
                 "shadowsMaxResolution",

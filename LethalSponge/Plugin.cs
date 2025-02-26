@@ -155,7 +155,6 @@ public class Plugin : BaseUnityPlugin
         //settings.lightLoopSettings.maxPunctualLightsOnScreen = Scoops.Config.maxPunctualLights.Value;
         //settings.lightLoopSettings.maxAreaLightsOnScreen = Scoops.Config.maxAreaLights.Value;
 
-        settings.hdShadowInitParams.maxShadowRequests = Scoops.Config.maxShadows.Value;
         settings.hdShadowInitParams.maxPunctualShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
         settings.hdShadowInitParams.maxDirectionalShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
         settings.hdShadowInitParams.maxAreaShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
