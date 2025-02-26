@@ -47,10 +47,12 @@ namespace Scoops.patches
         {
             if (chatMessage.ToLower() == "/sponge help")
             {
-                __instance.AddChatMessage("'/sponge': run Sponge.\n" +
-                    "'/sponge evaluate': run Sponge Evaluation only.\n" +
-                    "'/sponge clean': run Sponge Cleanup only.\n" +
-                    "'/sponge toggle': toggle Sponge daily auto activate.\n");
+                __instance.AddChatMessage("'/sponge': Run Sponge.\n" +
+                    "'/sponge evaluate': Run Sponge Evaluation only.\n" +
+                    "'/sponge clean': Run Sponge Cleanup only.\n" +
+                    "'/sponge toggle': Toggle Sponge daily auto activate.\n" +
+                    "'/sponge modelcheck': Ask Sponge for a readout of the meshes currently rendering.\n" +
+                    "'/sponge texturecheck': Ask Sponge for a readout of the textures currently rendering.\n");
                 return false;
             }
 
@@ -80,6 +82,20 @@ namespace Scoops.patches
                 Plugin.Log.LogMessage((SpongeService.enabled ? "Disabling" : "Enabling") + " Sponge daily automatic activation.");
                 __instance.AddChatMessage((SpongeService.enabled ? "Disabling" : "Enabling") + " Sponge daily automatic activation.");
                 SpongeService.enabled = !SpongeService.enabled;
+                return false;
+            }
+
+            if (chatMessage.ToLower() == "/sponge modelcheck")
+            {
+                __instance.AddChatMessage("Running Sponge model check.");
+                SpongeService.ModelCheck();
+                return false;
+            }
+
+            if (chatMessage.ToLower() == "/sponge texturecheck")
+            {
+                __instance.AddChatMessage("Running Sponge texture check.");
+                SpongeService.TextureCheck();
                 return false;
             }
 

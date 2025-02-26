@@ -9,7 +9,10 @@ using System.Reflection;
 using Unity.Properties;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using static System.Net.Mime.MediaTypeNames;
+using static UnityEngine.Rendering.HighDefinition.CopyFilterAttribute;
 
 namespace Scoops.service
 {
@@ -79,6 +82,7 @@ namespace Scoops.service
             initialCount = allObjects.Length;
             allObjects = [];
 
+            Plugin.Log.LogMessage("Type '/sponge help' in chat for commands.");
             Plugin.Log.LogMessage("Sponge Initialised.");
             Plugin.Log.LogMessage("---");
         }
@@ -344,6 +348,217 @@ namespace Scoops.service
             }
 
             return typeCount;
+        }
+
+        public static void ModelCheck()
+        {
+            Plugin.Log.LogMessage("---");
+            Plugin.Log.LogMessage("Running Sponge Model Check.");
+
+            int meshCount = 0;
+            int vertCount = 0;
+
+            Dictionary<string, Vector2Int> BundleVertDict = new Dictionary<string, Vector2Int>();
+            HashSet<Mesh> checkedMeshes = new HashSet<Mesh>();
+
+            List<MeshFilter> bigWinners = new List<MeshFilter>(10);
+
+            MeshFilter[] allMeshFilters = UnityEngine.Object.FindObjectsByType<MeshFilter>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            foreach (MeshFilter filter in allMeshFilters)
+            {
+                if (filter == null || filter.sharedMesh == null || checkedMeshes.Contains(filter.sharedMesh)) { continue; }
+                string bundle = TryGetObjectBundleName(filter.sharedMesh.name);
+
+                // if we find a bundle, make sure it isn't on the blacklist
+                if (!AssetBundleValid(bundle)) { continue; }
+
+                Renderer meshRenderer = filter.gameObject.GetComponent<Renderer>();
+
+                if (meshRenderer == null || !meshRenderer.isVisible) { continue; }
+
+                int vertexCount = filter.sharedMesh.vertexCount;
+
+                Vector2Int newCount = new Vector2Int(vertexCount, 1);
+
+                vertCount += vertexCount;
+                meshCount++;
+
+                BundleVertDict.TryGetValue(bundle, out Vector2Int currentCounts);
+                BundleVertDict[bundle] = currentCounts + newCount;
+
+                checkedMeshes.Add(filter.sharedMesh);
+
+                if ((bigWinners.Count < 10 || bigWinners[0].sharedMesh.vertexCount < vertexCount) && !bigWinners.Contains(filter))
+                {
+                    if (bigWinners.Count == 10)
+                    {
+                        bigWinners[0] = filter;
+                    } else
+                    {
+                        bigWinners.Add(filter);
+                    }
+
+                    bigWinners.Sort((a, b) => { return a.sharedMesh.vertexCount.CompareTo(b.sharedMesh.vertexCount); });
+                }
+
+                if (vertexCount > 1000)
+                {
+                    float cubedMeters = meshRenderer.bounds.size.x * meshRenderer.bounds.size.y * meshRenderer.bounds.size.z;
+                    float vertPerMeter = (float)vertexCount / cubedMeters;
+
+                    if (vertPerMeter > 5000f)
+                    {
+                        Plugin.Log.LogWarning("Mesh " + filter.sharedMesh.name + " for GameObject " + filter.gameObject.name + " has vertex density of " + vertPerMeter);
+                        Transform rootParent = filter.gameObject.transform;
+                        while (rootParent.parent != null)
+                        {
+                            rootParent = rootParent.parent;
+                        }
+                        Plugin.Log.LogWarning(" - " + vertexCount + " vertices over " + cubedMeters + " cubed meters.");
+                        Plugin.Log.LogWarning(" - On root GameObject " + rootParent.gameObject.name + ".");
+                        if (bundle != "unknown") Plugin.Log.LogWarning(" - From the bundle '" + bundle + "'");
+                    }
+                }
+            }
+
+            Plugin.Log.LogMessage("Found " + meshCount + " Visible Meshes.");
+            Plugin.Log.LogMessage("With " + vertCount + " Vertices total.");
+
+            foreach (string key in BundleVertDict.Keys)
+            {
+                if (key == "unknown") continue;
+
+                Plugin.Log.LogMessage(" - Bundle '" + key + "' contributed " + BundleVertDict[key].y + " Visible Meshes");
+                Plugin.Log.LogMessage("   and " + BundleVertDict[key].x + " Vertices total.");
+            }
+
+            Plugin.Log.LogMessage("The " + bigWinners.Count + " largest meshes were:");
+            foreach (MeshFilter filter in bigWinners)
+            {
+                string bundle = TryGetObjectBundleName(filter.sharedMesh.name);
+
+                Plugin.Log.LogMessage(" - Mesh '" + filter.sharedMesh.name + "' with " + filter.sharedMesh.vertexCount + " Vertices");
+                Plugin.Log.LogMessage("   on the GameObject with the name '" + filter.gameObject.name + "'");
+                if (bundle != "unknown") Plugin.Log.LogMessage("   from the bundle '" + bundle + "'");
+            }
+            Plugin.Log.LogMessage("The above counts may be inaccurate. Meshes can be attributed to the wrong bundle/scene in the case of overlapping names.");
+            Plugin.Log.LogMessage("---");
+        }
+
+        public static void TextureCheck()
+        {
+            Plugin.Log.LogMessage("---");
+            Plugin.Log.LogMessage("Running Sponge Texture Check.");
+
+            int texCount = 0;
+            int pixCount = 0;
+
+            Dictionary<string, Vector2Int> BundlePixelDict = new Dictionary<string, Vector2Int>();
+            HashSet<Texture> checkedTextures = new HashSet<Texture>();
+
+            List<Texture> bigWinners = new List<Texture>(10);
+
+            Renderer[] allRenderers = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            foreach (Renderer renderer in allRenderers)
+            {
+                if (renderer == null || !renderer.isVisible) { continue; }
+
+                foreach (Material mat in renderer.sharedMaterials)
+                {
+                    if (mat == null || mat.shader == null || mat.shader.GetPropertyCount() == 0) { continue; }
+
+                    List<Texture> allTextures = new List<Texture>();
+                    for (int i = 0; i < mat.shader.GetPropertyCount(); i++)
+                    {
+                        if (mat.shader.GetPropertyType(i) == UnityEngine.Rendering.ShaderPropertyType.Texture)
+                        {
+                            Texture propertyTex = mat.GetTexture(mat.shader.GetPropertyName(i));
+                            if (propertyTex != null)
+                            {
+                                allTextures.Add(propertyTex);
+                            }
+                        }
+                    }
+
+                    foreach (Texture tex in allTextures)
+                    {
+                        if (checkedTextures.Contains(tex)) { continue; }
+
+                        string bundle = TryGetObjectBundleName(tex.name);
+
+                        // if we find a bundle, make sure it isn't on the blacklist
+                        if (!AssetBundleValid(bundle)) { continue; }
+
+                        int pixelCount = tex.height * tex.width;
+
+                        Vector2Int newCount = new Vector2Int(pixCount, 1);
+
+                        pixCount += pixelCount;
+                        texCount++;
+
+                        BundlePixelDict.TryGetValue(bundle, out Vector2Int currentCounts);
+                        BundlePixelDict[bundle] = currentCounts + newCount;
+
+                        checkedTextures.Add(tex);
+
+                        if ((bigWinners.Count < 10 || (bigWinners[0].height * bigWinners[0].width) < pixelCount) && !bigWinners.Contains(tex))
+                        {
+                            if (bigWinners.Count == 10)
+                            {
+                                bigWinners[0] = tex;
+                            }
+                            else
+                            {
+                                bigWinners.Add(tex);
+                            }
+
+                            bigWinners.Sort((a, b) => { return (a.height * a.width).CompareTo(b.height * b.width); });
+                        }
+
+                        if (pixelCount > 1048576)
+                        {
+                            float largestDimension = Mathf.Max(renderer.bounds.size.x, Mathf.Max(renderer.bounds.size.y, renderer.bounds.size.z));
+                            float cubedMeters = largestDimension * largestDimension * largestDimension;
+                            float pixPerMeter = (float)pixelCount / cubedMeters;
+
+                            if (pixPerMeter > 500000f)
+                            {
+                                Plugin.Log.LogWarning("Texture " + tex.name + " for GameObject " + renderer.gameObject.name + " has pixel density of " + pixPerMeter);
+                                Transform rootParent = renderer.gameObject.transform;
+                                while (rootParent.parent != null)
+                                {
+                                    rootParent = rootParent.parent;
+                                }
+                                Plugin.Log.LogWarning(" - Dimensions " + tex.width + "x" + tex.height + " for " + cubedMeters + " cubed meters.");
+                                Plugin.Log.LogWarning(" - On root GameObject " + rootParent.gameObject.name + ".");
+                                if (bundle != "unknown") Plugin.Log.LogWarning(" - From the bundle '" + bundle + "'");
+                            }
+                        }
+                    }
+                }
+            }
+
+            Plugin.Log.LogMessage("Found " + texCount + " Visible Textures.");
+            Plugin.Log.LogMessage("With " + pixCount + " Pixels total.");
+
+            foreach (string key in BundlePixelDict.Keys)
+            {
+                if (key == "unknown") continue;
+
+                Plugin.Log.LogMessage(" - Bundle '" + key + "' contributed " + BundlePixelDict[key].y + " Visible Textures");
+                Plugin.Log.LogMessage("   and " + BundlePixelDict[key].x + " Pixels total.");
+            }
+
+            Plugin.Log.LogMessage("The " + bigWinners.Count + " largest textures were:");
+            foreach (Texture texture in bigWinners)
+            {
+                string bundle = TryGetObjectBundleName(texture.name);
+
+                Plugin.Log.LogMessage(" - Texture '" + texture.name + "' with dimensions " + texture.width + "x" + texture.height);
+                if (bundle != "unknown") Plugin.Log.LogMessage("   from the bundle '" + bundle + "'");
+            }
+            Plugin.Log.LogMessage("The above counts may be inaccurate. Textures can be attributed to the wrong bundle/scene in the case of overlapping names.");
+            Plugin.Log.LogMessage("---");
         }
 
         public static void SceneLoaded(Scene scene, LoadSceneMode mode)
