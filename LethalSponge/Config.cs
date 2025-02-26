@@ -45,6 +45,9 @@ namespace Scoops
         public static ConfigEntry<int> shadowsAtlasSize;
         public static ConfigEntry<float> fogBudget;
         public static ConfigEntry<bool> deferredOnly;
+        public static ConfigEntry<bool> changeLightFadeDistance;
+        public static ConfigEntry<float> lightVolumetricDistMult;
+        public static ConfigEntry<float> lightVolumetricDistCap;
 
         public static ConfigEntry<bool> runDaily;
 
@@ -274,7 +277,24 @@ namespace Scoops
                 true,
                 "Should Sponge set the Lit Shader Mode to Deferred Only? (This might free up some memory, and LC only uses Deferred anyway.)"
             );
-
+            changeLightFadeDistance = cfg.Bind(
+                "Graphics Quality",
+                "changeLightFadeDistance",
+                true,
+                "Should Sponge change the Fade Distance for all lights so they're not visible from too far away?"
+            );
+            lightVolumetricDistMult = cfg.Bind(
+                "Graphics Quality",
+                "lightVolumetricDistMult",
+                10f,
+                new ConfigDescription("What should the light's Range be multiplied by to find the Fade Distance?", new AcceptableValueRange<float>(2f, 50f))
+            );
+            lightVolumetricDistCap = cfg.Bind(
+                "Graphics Quality",
+                "lightVolumetricDistCap",
+                150f,
+                new ConfigDescription("What should the maximum Fade Distance be for lights? (LC Defaults tend to use 10000 for Fade Distance)", new AcceptableValueRange<float>(25f, 1000f))
+            );
 
             // Debug
             runDaily = cfg.Bind(

@@ -16,6 +16,11 @@ namespace Scoops.patches
         private static void RoundManager_FinishGeneratingLevel(ref RoundManager __instance)
         {
             SpongeService.DungeonLoaded(__instance.dungeonGenerator.Generator);
+
+            if (Config.changeLightFadeDistance.Value)
+            {
+                LightService.UpdateAllLights();
+            }
         }
     }
 }
