@@ -34,14 +34,13 @@ namespace Scoops
         public static ConfigEntry<bool> qualityOverrides;
         public static ConfigEntry<int> decalDrawDist;
         public static ConfigEntry<int> decalAtlasSize;
-        public static ConfigEntry<int> maxVolumetricFog;
+        //public static ConfigEntry<int> maxVolumetricFog;
         public static ConfigEntry<string> reflectionAtlasSize;
         public static ConfigEntry<int> maxCubeReflectionProbes;
         public static ConfigEntry<int> maxPlanarReflectionProbes;
         //public static ConfigEntry<int> maxDirectionalLights;
         //public static ConfigEntry<int> maxPunctualLights;
         //public static ConfigEntry<int> maxAreaLights;
-        public static ConfigEntry<int> maxShadows;
         public static ConfigEntry<int> shadowsMaxResolution;
         public static ConfigEntry<int> shadowsAtlasSize;
         public static ConfigEntry<float> fogBudget;
@@ -218,12 +217,12 @@ namespace Scoops
                 2048,
                 new ConfigDescription("What should the texture size be for the the Decal Atlas? (squared)", new AcceptableValueList<int>(2048, 4096))
             );
-            maxVolumetricFog = cfg.Bind(
-                "Graphics Quality",
-                "maxVolumetricFog",
-                20,
-                new ConfigDescription("How many Volumetric Fog volumes should be able to be shown at once? (LC default is 80)", new AcceptableValueRange<int>(5, 80))
-            );
+            //maxVolumetricFog = cfg.Bind(
+            //    "Graphics Quality",
+            //    "maxVolumetricFog",
+            //    20,
+            //    new ConfigDescription("How many Volumetric Fog volumes should be able to be shown at once? (LC default is 80)", new AcceptableValueRange<int>(5, 80))
+            //);
             reflectionAtlasSize = cfg.Bind(
                 "Graphics Quality",
                 "reflectionAtlasSize",
