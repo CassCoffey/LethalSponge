@@ -117,6 +117,13 @@ public class Plugin : BaseUnityPlugin
         {
             _harmony.PatchAll(typeof(HDRenderPipeline_RecordRenderGraph_Patch));
         }
+
+        if (Scoops.Config.fixInputActions.Value)
+        {
+            InputActionSpongePatches.Init();
+            _harmony.PatchAll(typeof(InputActionSpongePatches));
+            Plugin.Log.LogInfo("Input Actions Patched");
+        }
     }
 
     private void ApplyVerbosePluginPatch()

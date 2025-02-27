@@ -14,6 +14,7 @@ namespace Scoops
 
         public static ConfigEntry<bool> unloadUnused;
         public static ConfigEntry<bool> fixFoliageLOD;
+        public static ConfigEntry<bool> fixInputActions;
 
         public static ConfigEntry<bool> fixCameraSettings;
         public static ConfigEntry<bool> patchCameraScript;
@@ -108,6 +109,12 @@ namespace Scoops
                     "fixFoliageLOD",
                     true,
                     "Should Sponge replace the base Lethal Company FoliageDetailDistance script with one that doesn't leak materials? (LethalPerformance has a similar fix as well)"
+            );
+            fixInputActions = cfg.Bind(
+                    "Cleanup",
+                    "fixInputActions",
+                    true,
+                    "Should Sponge fix the repeated instantiation of PlayerActions that would cause additional input lag every time a game is loaded?"
             );
 
             // Cameras

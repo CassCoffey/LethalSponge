@@ -40,6 +40,9 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Reference Include="Assembly-CSharp-firstpass">
+        <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+      </Reference>
       <Reference Publicize="True" Include="LethalLevelLoader">
         <HintPath>..\..\..\Stuff\Modding\Lethal Company\LLL\LethalLevelLoader.dll</HintPath>
       </Reference>
@@ -48,6 +51,9 @@
       </Reference>
       <Reference Publicize="True" Include="Unity.RenderPipelines.HighDefinition.Runtime">
         <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.RenderPipelines.HighDefinition.Runtime.dll</HintPath>
+      </Reference>
+      <Reference Publicize="True" Include="Unity.InputSystem">
+        <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.InputSystem.dll</HintPath>
       </Reference>
     </ItemGroup>
 
