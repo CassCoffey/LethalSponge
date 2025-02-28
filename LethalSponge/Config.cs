@@ -138,7 +138,7 @@ namespace Scoops
             mapCameraFramerate = cfg.Bind(
                     "Cameras",
                     "mapCameraFramerate",
-                    15,
+                    20,
                     "What framerate should the radar map camera run at? (Requires fixCameraSettings = true)"
             );
 

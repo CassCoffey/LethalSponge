@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -128,10 +129,16 @@ namespace Scoops.service
             if (Config.useCustomShader.Value)
             {
                 HDAdditionalCameraData hdCameraData = player.gameplayCamera.GetComponent<HDAdditionalCameraData>();
-                newVolume.GetComponent<CustomPassVolume>().targetCamera = player.gameplayCamera;
+                UpdateCamera(player.gameplayCamera);
             }
 
             Plugin.Log.LogMessage("Player camera patched.");
+        }
+
+
+        public static void UpdateCamera(Camera camera)
+        {
+            newVolume.GetComponent<CustomPassVolume>().targetCamera = camera;
         }
 
         private static void SetOverrides(Camera camera, bool mapCamera = false)

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Unity.Netcode;
+using UnityEngine;
 
 namespace Scoops.patches
 {
@@ -37,6 +38,16 @@ namespace Scoops.patches
             if (SpongeService.enabled)
             {
                 SpongeService.ApplySponge();
+            }
+        }
+
+        [HarmonyPatch("SwitchCamera")]
+        [HarmonyPostfix]
+        private static void StartOfRound_SwitchCamera(ref StartOfRound __instance, Camera newCamera)
+        {
+            if (Config.removePosterizationShader.Value && Config.useCustomShader.Value)
+            {
+                CameraService.UpdateCamera(newCamera);
             }
         }
 
