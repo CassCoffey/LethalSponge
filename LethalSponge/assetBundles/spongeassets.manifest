@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 1112754824
+CRC: 1663443757
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 01f155ff1fcc6b96ba1f35bf225e2c6e
+    Hash: ffea598c7cf058507c013011982a1dce
   TypeTreeHash:
     serializedVersion: 2
     Hash: a48cae78f9590ae8816f5912df27a798
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 01f155ff1fcc6b96ba1f35bf225e2c6e
+    Hash: ffea598c7cf058507c013011982a1dce
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -28,5 +28,7 @@ SerializeReferenceClassIdentifiers:
 - AssemblyName: Unity.RenderPipelines.HighDefinition.Runtime
   ClassName: UnityEngine.Rendering.HighDefinition.FullScreenCustomPass
 Assets:
+- Assets/Sponge/SpongePosterize.shader
+- Assets/Sponge/FullScreen_SpongePosterize.mat
 - Assets/Sponge/SpongeCustomPass.prefab
 Dependencies: []

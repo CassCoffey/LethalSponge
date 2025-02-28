@@ -1,4 +1,5 @@
 ﻿using GameNetcodeStuff;
+using Scoops.rendering;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -90,12 +91,26 @@ namespace Scoops.service
             {
                 // The old switcharoo
                 newVolume = GameObject.Instantiate((GameObject)Plugin.SpongeAssets.LoadAsset("SpongeCustomPass"), oldVolume.transform.parent);
-                
+
+                Plugin.SpongeAssets.LoadAsset("SpongePosterize");
+                Plugin.SpongeAssets.LoadAsset("FullScreen_SpongePosterize");
+
                 // here we use the new injection point added by the transpiler
                 newVolume.GetComponent<CustomPassVolume>().injectionPoint = (CustomPassInjectionPoint)7;
+
+                newVolume.GetComponent<CustomPassVolume>().customPasses.Clear();
+                newVolume.GetComponent<CustomPassVolume>().customPasses.Add(new SpongeCustomPass());
             }
 
-            GameObject.Destroy(oldVolume);
+            // Lets do this less destructively.
+            foreach (CustomPass pass in oldVolume.GetComponent<CustomPassVolume>().customPasses)
+            {
+                if (pass.name == "FS")
+                {
+                    oldVolume.GetComponent<CustomPassVolume>().customPasses.Remove(pass);
+                    break;
+                }
+            }
         }
 
         public static void ApplyCameraFixes()
@@ -139,6 +154,12 @@ namespace Scoops.service
         public static void UpdateCamera(Camera camera)
         {
             newVolume.GetComponent<CustomPassVolume>().targetCamera = camera;
+
+            if (camera.targetTexture != null)
+            {
+                if (SpongeCustomPass.posterizationRT != null) RTHandles.Release(SpongeCustomPass.posterizationRT);
+                SpongeCustomPass.posterizationRT = RTHandles.Alloc(camera.targetTexture.width, camera.targetTexture.height, 1, DepthBits.None, GraphicsFormat.R8G8B8A8_SRGB, FilterMode.Point, TextureWrapMode.Clamp, TextureDimension.Tex2D, true);
+            }
         }
 
         private static void SetOverrides(Camera camera, bool mapCamera = false)
