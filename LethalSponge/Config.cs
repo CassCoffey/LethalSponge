@@ -17,9 +17,14 @@ namespace Scoops
         public static ConfigEntry<bool> fixInputActions;
 
         public static ConfigEntry<bool> fixCameraSettings;
+        public static ConfigEntry<bool> applyShipCameraQualityOverrides;
+        public static ConfigEntry<bool> applySecurityCameraQualityOverrides;
+        public static ConfigEntry<bool> applyMapCameraQualityOverrides;
         public static ConfigEntry<bool> patchCameraScript;
+        public static ConfigEntry<float> securityCameraCullDistance;
         public static ConfigEntry<int> mapCameraFramerate;
         public static ConfigEntry<int> securityCameraFramerate;
+        public static ConfigEntry<int> shipCameraFramerate;
 
         public static ConfigEntry<bool> removePosterizationShader;
         public static ConfigEntry<bool> useCustomShader;
@@ -123,23 +128,53 @@ namespace Scoops
                     true,
                     "Should Sponge change the settings for the ship cameras and radar cam to improve performance?"
             );
+            applyShipCameraQualityOverrides = cfg.Bind(
+                    "Cameras",
+                    "applyShipCameraQualityOverrides",
+                    true,
+                    "Should Sponge disable extra HDRP rendering features on the Ship camera? (Requires fixCameraSettings = true)"
+            );
+            applySecurityCameraQualityOverrides = cfg.Bind(
+                    "Cameras",
+                    "applySecurityCameraQualityOverrides",
+                    true,
+                    "Should Sponge disable extra HDRP rendering features on the Security camera? (Requires fixCameraSettings = true)"
+            );
+            applyMapCameraQualityOverrides = cfg.Bind(
+                    "Cameras",
+                    "applyMapCameraQualityOverrides",
+                    true,
+                    "Should Sponge disable extra HDRP rendering features on the Map camera? (Requires fixCameraSettings = true)"
+            );
             patchCameraScript = cfg.Bind(
                     "Cameras",
                     "patchCameraScript",
                     true,
                     "Should Sponge replace the base Lethal Company ManualCameraRenderer.MeetsCameraEnabledConditions function with one that more reliably disables ship cameras when they're not in view?"
             );
+            securityCameraCullDistance = cfg.Bind(
+                    "Cameras",
+                    "securityCameraCullDistance",
+                    20f,
+                    new ConfigDescription("What should the culling distance be for the ship security camera? You might want to increase this if you're using a mod to re-add planets in orbit. (LC default is 150)", new AcceptableValueRange<float>(15, 150))
+            );
             securityCameraFramerate = cfg.Bind(
                     "Cameras",
                     "securityCameraFramerate",
                     15,
-                    "What framerate should the interior and exterior cams run at? (Requires fixCameraSettings = true)"
+                    "What framerate should the exterior cam run at? 0 = not limited. (Requires fixCameraSettings = true)"
+            );
+            shipCameraFramerate = cfg.Bind(
+                    "Cameras",
+                    "shipCameraFramerate",
+                    15,
+                    "What framerate should the interior cam run at? 0 = not limited. (Requires fixCameraSettings = true)"
             );
             mapCameraFramerate = cfg.Bind(
                     "Cameras",
                     "mapCameraFramerate",
                     20,
-                    "What framerate should the radar map camera run at? (Requires fixCameraSettings = true)"
+                    "What framerate should the radar map camera run at? 0 = not limited. (Requires fixCameraSettings = true)"
             );
 
             // Rendering
@@ -215,7 +250,7 @@ namespace Scoops
                 "Graphics Quality",
                 "decalAtlasSize",
                 2048,
-                new ConfigDescription("What should the texture size be for the the Decal Atlas? (squared)", new AcceptableValueList<int>(2048, 4096))
+                new ConfigDescription("What should the texture size be for the the Decal Atlas? (squared) (LC default is 4096)", new AcceptableValueList<int>(2048, 4096))
             );
             //maxVolumetricFog = cfg.Bind(
             //    "Graphics Quality",
@@ -227,7 +262,7 @@ namespace Scoops
                 "Graphics Quality",
                 "reflectionAtlasSize",
                 "Resolution1024x1024",
-                new ConfigDescription("What should the texture size be for the the Decal Atlas? (LC default is 2048x1024)", new AcceptableValueList<string>("Resolution512x512", "Resolution1024x512", "Resolution1024x1024", "Resolution2048x1024"))
+                new ConfigDescription("What should the texture size be for the the Decal Atlas? (LC default is 16384x8192)", new AcceptableValueList<string>("Resolution512x512", "Resolution1024x512", "Resolution1024x1024", "Resolution2048x1024", "Resolution2048x2048", "Resolution4096x2048"))
             );
             maxCubeReflectionProbes = cfg.Bind(
                 "Graphics Quality",

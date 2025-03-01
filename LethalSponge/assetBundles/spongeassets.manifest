@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 1663443757
+CRC: 1710437723
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: ffea598c7cf058507c013011982a1dce
+    Hash: feaa6fcdd0418340b40ad4e164796fee
   TypeTreeHash:
     serializedVersion: 2
     Hash: a48cae78f9590ae8816f5912df27a798
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: ffea598c7cf058507c013011982a1dce
+    Hash: feaa6fcdd0418340b40ad4e164796fee
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -24,9 +24,7 @@ ClassTypes:
   Script: {fileID: 11500000, guid: 26d6499a6bd256e47b859377446493a1, type: 3}
 - Class: 115
   Script: {instanceID: 0}
-SerializeReferenceClassIdentifiers:
-- AssemblyName: Unity.RenderPipelines.HighDefinition.Runtime
-  ClassName: UnityEngine.Rendering.HighDefinition.FullScreenCustomPass
+SerializeReferenceClassIdentifiers: []
 Assets:
 - Assets/Sponge/SpongePosterize.shader
 - Assets/Sponge/FullScreen_SpongePosterize.mat

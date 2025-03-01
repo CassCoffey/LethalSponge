@@ -1,7 +1,10 @@
 ﻿using GameNetcodeStuff;
 using HarmonyLib;
 using Scoops.service;
+using Sponge.Utilities.IL;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -10,6 +13,38 @@ namespace Scoops.patches
     [HarmonyPatch(typeof(ManualCameraRenderer))]
     public class ManualCameraRendererSpongePatch
     {
+        [HarmonyPatch("Update")]
+        [HarmonyTranspiler]
+        private static IEnumerable<CodeInstruction> ManualCameraRenderer_Update_Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            // Looking for 'if (this.renderAtLowerFramerate)' 
+            var injector = new ILInjector(instructions)
+            .Find([
+                ILMatcher.Ldarg(0),
+                ILMatcher.Ldfld(AccessTools.Field(typeof(ManualCameraRenderer), nameof(ManualCameraRenderer.renderAtLowerFramerate))),
+                ILMatcher.Opcode(OpCodes.Brfalse)
+            ]);
+            
+            if (!injector.IsValid)
+            {
+                Plugin.Log.LogError("Failed to find renderAtLowerFramerate branch in ManualCameraRenderer.Update");
+                return instructions;
+            }
+            
+            // Remove the block inside the if statement and replace with a static call
+            var label = (Label)injector.LastMatchedInstruction.operand;
+            return injector
+                .GoToLastMatchedInstruction()
+                .FindLabel(label)
+                .RemoveLastMatch()
+                .InsertInPlace([
+                    new CodeInstruction(OpCodes.Ldarg_0),
+                    new CodeInstruction(OpCodes.Call, typeof(ManualCameraRendererSpongePatch).GetMethod(nameof(ManualCameraRendererSpongePatch.ApplyFramerateCap))),
+                    new CodeInstruction(OpCodes.Ret)
+                    ])
+                .ReleaseInstructions();
+        }
+
         [HarmonyPatch("Update")]
         [HarmonyPostfix]
         private static void ManualCameraRenderer_Update(ref ManualCameraRenderer __instance)
@@ -82,6 +117,18 @@ namespace Scoops.patches
             else
             {
                 return !frustum.Any(plane => plane.GetDistanceToPoint(mesh.transform.position) < 0);
+            }
+        }
+
+        // Thanks again Zaggy1024 for letting me know about camera.enabled being better than camera.render for HDRP
+        public static void ApplyFramerateCap(ManualCameraRenderer manualCameraRenderer)
+        {
+            manualCameraRenderer.cam.enabled = false;
+            manualCameraRenderer.elapsed += Time.deltaTime;
+            if (manualCameraRenderer.elapsed > 1f / manualCameraRenderer.fps)
+            {
+                manualCameraRenderer.elapsed = 0f;
+                manualCameraRenderer.cam.enabled = true;
             }
         }
     }

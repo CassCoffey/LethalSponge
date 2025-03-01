@@ -9,6 +9,7 @@ using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.Windows.Speech;
 
 namespace Scoops.service
 {
@@ -25,6 +26,9 @@ namespace Scoops.service
 
         public static GameObject oldVolume;
         public static GameObject newVolume;
+
+        public static CustomPass oldPass;
+        public static CustomPass newPass;
 
         public static bool Init()
         {
@@ -99,7 +103,8 @@ namespace Scoops.service
                 newVolume.GetComponent<CustomPassVolume>().injectionPoint = (CustomPassInjectionPoint)7;
 
                 newVolume.GetComponent<CustomPassVolume>().customPasses.Clear();
-                newVolume.GetComponent<CustomPassVolume>().customPasses.Add(new SpongeCustomPass());
+                newPass = new SpongeCustomPass();
+                newVolume.GetComponent<CustomPassVolume>().customPasses.Add(newPass);
             }
 
             // Lets do this less destructively.
@@ -107,29 +112,61 @@ namespace Scoops.service
             {
                 if (pass.name == "FS")
                 {
-                    oldVolume.GetComponent<CustomPassVolume>().customPasses.Remove(pass);
+                    oldPass = pass;
+                    oldPass.enabled = false;
                     break;
                 }
             }
         }
 
+        public static void TogglePasses()
+        {
+            if (newPass != null && oldPass != null)
+            {
+                oldPass.enabled = !oldPass.enabled;
+                newPass.enabled = !oldPass.enabled;
+                Plugin.Log.LogMessage((newPass.enabled ? "Enabling" : "Disabling") + " Sponge custom shader.");
+            }
+        }
+
         public static void ApplyCameraFixes()
         {
-            SetOverrides(ShipCamera);
-            SetOverrides(SecurityCamera);
-            SetOverrides(MapCamera, true);
+            if (Config.applyShipCameraQualityOverrides.Value)
+            {
+                SetOverrides(ShipCamera);
+            }
+            if (Config.applySecurityCameraQualityOverrides.Value)
+            {
+                SetOverrides(SecurityCamera);
+            }
+            if (Config.applyMapCameraQualityOverrides.Value)
+            {
+                SetOverrides(MapCamera, true);
+            }
 
             ShipCamera.farClipPlane = 13f;
-            SecurityCamera.farClipPlane = 20f;
+            SecurityCamera.farClipPlane = Config.securityCameraCullDistance.Value;
 
-            ShipCamera.GetComponent<ManualCameraRenderer>().renderAtLowerFramerate = true;
-            ShipCamera.GetComponent<ManualCameraRenderer>().fps = Config.securityCameraFramerate.Value;
+            if (Config.shipCameraFramerate.Value != 0)
+            {
+                ShipCamera.GetComponent<ManualCameraRenderer>().renderAtLowerFramerate = true;
+                ShipCamera.GetComponent<ManualCameraRenderer>().fps = Config.securityCameraFramerate.Value;
+                ShipCamera.GetComponent<HDAdditionalCameraData>().hasPersistentHistory = true;
+            }
 
-            SecurityCamera.GetComponent<ManualCameraRenderer>().renderAtLowerFramerate = true;
-            SecurityCamera.GetComponent<ManualCameraRenderer>().fps = Config.securityCameraFramerate.Value;
+            if (Config.securityCameraFramerate.Value != 0)
+            {
+                SecurityCamera.GetComponent<ManualCameraRenderer>().renderAtLowerFramerate = true;
+                SecurityCamera.GetComponent<ManualCameraRenderer>().fps = Config.securityCameraFramerate.Value;
+                SecurityCamera.GetComponent<HDAdditionalCameraData>().hasPersistentHistory = true;
+            }
 
-            MonitorWall.transform.Find("Cube.001/CameraMonitorScript").GetComponent<ManualCameraRenderer>().renderAtLowerFramerate = true;
-            MonitorWall.transform.Find("Cube.001/CameraMonitorScript").GetComponent<ManualCameraRenderer>().fps = Config.mapCameraFramerate.Value;
+            if (Config.mapCameraFramerate.Value != 0)
+            {
+                MonitorWall.transform.Find("Cube.001/CameraMonitorScript").GetComponent<ManualCameraRenderer>().renderAtLowerFramerate = true;
+                MonitorWall.transform.Find("Cube.001/CameraMonitorScript").GetComponent<ManualCameraRenderer>().fps = Config.mapCameraFramerate.Value;
+                MapCamera.GetComponent<HDAdditionalCameraData>().hasPersistentHistory = true;
+            }
 
             Plugin.Log.LogMessage("Ship cameras patched.");
         }
@@ -141,25 +178,7 @@ namespace Scoops.service
                 SetPlayerOverrides(player.gameplayCamera);
             }
 
-            if (Config.useCustomShader.Value)
-            {
-                HDAdditionalCameraData hdCameraData = player.gameplayCamera.GetComponent<HDAdditionalCameraData>();
-                UpdateCamera(player.gameplayCamera);
-            }
-
             Plugin.Log.LogMessage("Player camera patched.");
-        }
-
-
-        public static void UpdateCamera(Camera camera)
-        {
-            newVolume.GetComponent<CustomPassVolume>().targetCamera = camera;
-
-            if (camera.targetTexture != null)
-            {
-                if (SpongeCustomPass.posterizationRT != null) RTHandles.Release(SpongeCustomPass.posterizationRT);
-                SpongeCustomPass.posterizationRT = RTHandles.Alloc(camera.targetTexture.width, camera.targetTexture.height, 1, DepthBits.None, GraphicsFormat.R8G8B8A8_SRGB, FilterMode.Point, TextureWrapMode.Clamp, TextureDimension.Tex2D, true);
-            }
         }
 
         private static void SetOverrides(Camera camera, bool mapCamera = false)

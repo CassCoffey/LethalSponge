@@ -29,7 +29,9 @@ namespace Scoops.rendering
 
         public override void Execute(CustomPassContext ctx) 
         {
-            CoreUtils.SetRenderTarget(ctx.cmd, posterizationRT, ClearFlag.Color);
+            ctx.propertyBlock.SetTexture("_SpongeCameraColorBuffer", ctx.cameraColorBuffer);
+
+            CoreUtils.SetRenderTarget(ctx.cmd, posterizationRT, ClearFlag.All);
             CoreUtils.DrawFullScreen(ctx.cmd, posterizationMaterial, ctx.propertyBlock, posterizationMaterial.FindPass("ReadColor"));
 
             ctx.propertyBlock.SetTexture("_PosterizationBuffer", posterizationRT);

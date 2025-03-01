@@ -41,16 +41,6 @@ namespace Scoops.patches
             }
         }
 
-        [HarmonyPatch("SwitchCamera")]
-        [HarmonyPostfix]
-        private static void StartOfRound_SwitchCamera(ref StartOfRound __instance, Camera newCamera)
-        {
-            if (Config.removePosterizationShader.Value && Config.useCustomShader.Value)
-            {
-                CameraService.UpdateCamera(newCamera);
-            }
-        }
-
         [HarmonyPatch(typeof(HUDManager))]
         [HarmonyPatch("AddTextToChatOnServer")]
         [HarmonyPrefix]
@@ -63,7 +53,8 @@ namespace Scoops.patches
                     "'/sponge clean': Run Sponge Cleanup only.\n" +
                     "'/sponge toggle': Toggle Sponge daily auto activate.\n" +
                     "'/sponge modelcheck': Ask Sponge for a readout of the meshes currently rendering.\n" +
-                    "'/sponge texturecheck': Ask Sponge for a readout of the textures currently rendering.\n");
+                    "'/sponge texturecheck': Ask Sponge for a readout of the textures currently rendering.\n" +
+                    "'/sponge shader': Toggle between Sponge custom shader and original LC shader.\n");
                 return false;
             }
 
@@ -107,6 +98,13 @@ namespace Scoops.patches
             {
                 __instance.AddChatMessage("Running Sponge texture check.");
                 SpongeService.TextureCheck();
+                return false;
+            }
+
+            if (chatMessage.ToLower() == "/sponge shader")
+            {
+                __instance.AddChatMessage("Toggling Sponge custom shader.");
+                CameraService.TogglePasses();
                 return false;
             }
 
