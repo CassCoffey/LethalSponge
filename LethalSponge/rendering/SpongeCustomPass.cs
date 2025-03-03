@@ -20,19 +20,27 @@ namespace Scoops.rendering
             if (Config.useWIPCustomShader.Value)
             {
                 posterizationShader = (Shader)Plugin.SpongeAssets.LoadAsset("SpongePosterizeWIP");
+
+                posterizationRT = RTHandles.Alloc(
+                    Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
+                    colorFormat: GraphicsFormat.B10G11R11_UFloatPack32,
+                    useDynamicScale: true, name: "Posterization Buffer"
+                );
             }
             else
             {
                 posterizationShader = (Shader)Plugin.SpongeAssets.LoadAsset("SpongePosterize");
+
+                posterizationRT = RTHandles.Alloc(
+                    Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
+                    colorFormat: GraphicsFormat.R8G8B8A8_SRGB,
+                    useDynamicScale: true, name: "Posterization Buffer"
+                );
             }
                 
             posterizationMaterial = CoreUtils.CreateEngineMaterial(posterizationShader);
 
-            posterizationRT = RTHandles.Alloc(
-                Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
-                colorFormat: GraphicsFormat.R8G8B8A8_SRGB,
-                useDynamicScale: true, name: "Posterization Buffer"
-            );
+            
         }
 
         public override void Execute(CustomPassContext ctx) 

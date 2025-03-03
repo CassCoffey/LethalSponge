@@ -17,6 +17,11 @@ namespace Scoops.patches
         {
             SpongeService.Initialize();
 
+            if (Config.changeLightFadeDistance.Value || Config.volumetricCompensation.Value)
+            {
+                LightService.UpdateAllLights();
+            }
+
             if (Config.fixInputActions.Value)
             {
                 InputActionSpongePatches.Enable();
@@ -59,7 +64,7 @@ namespace Scoops.patches
                     "'/sponge toggle': Toggle Sponge daily auto activate.\n" +
                     "'/sponge modelcheck': Ask Sponge for a readout of the meshes currently rendering.\n" +
                     "'/sponge texturecheck': Ask Sponge for a readout of the textures currently rendering.\n" +
-                    (Config.useCustomShader.Value ? "'/sponge shader': Toggle between Sponge custom shader and original LC shader.\n" : ""));
+                    ((Config.useCustomShader.Value || Config.useWIPCustomShader.Value) ? "'/sponge shader': Toggle between Sponge custom shader and original LC shader.\n" : ""));
                 return false;
             }
 
@@ -108,7 +113,7 @@ namespace Scoops.patches
 
             if (chatMessage.ToLower() == "/sponge shader")
             {
-                if (Config.useCustomShader.Value)
+                if (Config.useCustomShader.Value || Config.useWIPCustomShader.Value)
                 {
                     __instance.AddChatMessage("Toggling Sponge custom shader.");
                     CameraService.TogglePasses();

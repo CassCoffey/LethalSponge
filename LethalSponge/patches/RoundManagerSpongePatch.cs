@@ -15,9 +15,12 @@ namespace Scoops.patches
         [HarmonyPostfix]
         private static void RoundManager_FinishGeneratingLevel(ref RoundManager __instance)
         {
-            SpongeService.DungeonLoaded(__instance.dungeonGenerator.Generator);
+            if (Config.verboseLogging.Value)
+            {
+                SpongeService.DungeonLoaded(__instance.dungeonGenerator.Generator);
+            }
 
-            if (Config.changeLightFadeDistance.Value)
+            if (Config.changeLightFadeDistance.Value || Config.volumetricCompensation.Value)
             {
                 LightService.UpdateAllLights();
             }

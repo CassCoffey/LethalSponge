@@ -1,33 +1,21 @@
 ManifestFileVersion: 0
-CRC: 318513113
+CRC: 3730202057
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: b932c7179addbb688196c20110d5f083
+    Hash: ff22386c95c7c0df2f227ce568edc4cd
   TypeTreeHash:
     serializedVersion: 2
-    Hash: a48cae78f9590ae8816f5912df27a798
+    Hash: 0df1dec30b5d061d422d3e6493d27647
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: b932c7179addbb688196c20110d5f083
+    Hash: ff22386c95c7c0df2f227ce568edc4cd
 HashAppended: 0
 ClassTypes:
-- Class: 1
-  Script: {instanceID: 0}
-- Class: 4
-  Script: {instanceID: 0}
-- Class: 21
-  Script: {instanceID: 0}
 - Class: 48
-  Script: {instanceID: 0}
-- Class: 114
-  Script: {fileID: 11500000, guid: 26d6499a6bd256e47b859377446493a1, type: 3}
-- Class: 115
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
 - Assets/Sponge/SpongePosterizeWIP.shader
-- Assets/Sponge/FullScreen_SpongePosterize.mat
 - Assets/Sponge/SpongePosterize.shader
-- Assets/Sponge/SpongeCustomPass.prefab
 Dependencies: []

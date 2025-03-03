@@ -91,19 +91,16 @@ namespace Scoops.service
         {
             oldVolume = GameObject.Find("CustomPass");
 
-            if (Config.useCustomShader.Value)
+            if (Config.useCustomShader.Value || Config.useWIPCustomShader.Value)
             {
                 // The old switcharoo
-                newVolume = GameObject.Instantiate((GameObject)Plugin.SpongeAssets.LoadAsset("SpongeCustomPass"), oldVolume.transform.parent);
-
-                Plugin.SpongeAssets.LoadAsset("SpongePosterize");
-                Plugin.SpongeAssets.LoadAsset("SpongePosterizeWIP");
-                Plugin.SpongeAssets.LoadAsset("FullScreen_SpongePosterize");
+                newVolume = new GameObject("SpongeCustomPass");
+                newVolume.transform.parent = oldVolume.transform.parent;
+                newVolume.AddComponent<CustomPassVolume>();
 
                 // here we use the new injection point added by the transpiler
                 newVolume.GetComponent<CustomPassVolume>().injectionPoint = (CustomPassInjectionPoint)7;
 
-                newVolume.GetComponent<CustomPassVolume>().customPasses.Clear();
                 newPass = new SpongeCustomPass();
                 newVolume.GetComponent<CustomPassVolume>().customPasses.Add(newPass);
             }
@@ -127,6 +124,8 @@ namespace Scoops.service
                 oldPass.enabled = !oldPass.enabled;
                 newPass.enabled = !oldPass.enabled;
                 Plugin.Log.LogMessage((newPass.enabled ? "Enabling" : "Disabling") + " Sponge custom shader.");
+
+                LightService.ToggleLightIntensity();
             }
         }
 

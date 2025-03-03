@@ -76,11 +76,14 @@ namespace Scoops.service
             Plugin.Log.LogMessage("---");
             Plugin.Log.LogMessage("Initializing Sponge");
 
-            allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
-            Plugin.Log.LogMessage("Initial count of " + allObjects.Length + " objects loaded.");
-            prevCount = allObjects.Length;
-            initialCount = allObjects.Length;
-            allObjects = [];
+            if (!Config.minimalLogging.Value)
+            {
+                allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
+                Plugin.Log.LogMessage("Initial count of " + allObjects.Length + " objects loaded.");
+                prevCount = allObjects.Length;
+                initialCount = allObjects.Length;
+                allObjects = [];
+            }
 
             Plugin.Log.LogMessage("Type '/sponge help' in chat for commands.");
             Plugin.Log.LogMessage("Sponge Initialised.");
@@ -129,7 +132,7 @@ namespace Scoops.service
             {
                 PerformEvaluation();
             }
-            if (Config.minimalLogging.Value && !Config.verboseLogging.Value)
+            if (!Config.minimalLogging.Value)
             {
                 allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
                 newCount = allObjects.Length;
@@ -153,7 +156,7 @@ namespace Scoops.service
             if (Config.unloadUnused.Value)
             {
                 Plugin.Log.LogMessage("Resources.UnloadUnusedAssets() completed.");
-                if (Config.minimalLogging.Value)
+                if (!Config.minimalLogging.Value)
                 {
                     allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
                     int beforeCleanCount = newCount;
@@ -166,7 +169,7 @@ namespace Scoops.service
 
             stopwatch.Stop();
             TimeSpan elapsedTime = stopwatch.Elapsed;
-            if (Config.minimalLogging.Value)
+            if (!Config.minimalLogging.Value)
             {
                 int initialChange = newCount - initialCount;
                 float initialPercentChange = ((float)initialChange / (float)initialCount) * 100f;

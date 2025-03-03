@@ -30,6 +30,7 @@ namespace Scoops
         public static ConfigEntry<bool> removePosterizationShader;
         public static ConfigEntry<bool> useCustomShader;
         public static ConfigEntry<bool> useWIPCustomShader;
+        public static ConfigEntry<bool> volumetricCompensation;
         public static ConfigEntry<bool> disableDOF;
         public static ConfigEntry<bool> disableMotionBlur;
         public static ConfigEntry<bool> disableBloom;
@@ -204,6 +205,12 @@ namespace Scoops
                 "useWIPCustomShader",
                 false,
                 "Should Sponge replace the removed shader with a Work In Progress one? (Takes precedence over useCustomShader) (Requires removePosterizationShader = true)"
+            );
+            volumetricCompensation = cfg.Bind(
+                "Rendering",
+                "volumetricCompensation",
+                true,
+                "Should Sponge adjust all of the lights/fog to be more intense to make up for the changes in the custom shader? (Requires useCustomShader or useWIPCustomShader = true)"
             );
             disableDOF = cfg.Bind(
                 "Rendering",

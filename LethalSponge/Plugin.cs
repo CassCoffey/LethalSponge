@@ -17,7 +17,7 @@ public static class PluginInformation
 {
     public const string PLUGIN_GUID = "LethalSponge";
     public const string PLUGIN_NAME = "LethalSponge";
-    public const string PLUGIN_VERSION = "1.0.4";
+    public const string PLUGIN_VERSION = "1.0.5";
 }
 
 [BepInPlugin(PluginInformation.PLUGIN_GUID, PluginInformation.PLUGIN_NAME, PluginInformation.PLUGIN_VERSION)]
@@ -97,6 +97,7 @@ public class Plugin : BaseUnityPlugin
     private void ApplyPluginPatch()
     {
         _harmony.PatchAll(typeof(StartOfRoundSpongePatch));
+        _harmony.PatchAll(typeof(RoundManagerSpongePatch));
 
         if (Scoops.Config.fixFoliageLOD.Value)
         {
@@ -108,12 +109,12 @@ public class Plugin : BaseUnityPlugin
             _harmony.PatchAll(typeof(ManualCameraRendererSpongePatch));
         }
 
-        if (Scoops.Config.disableBloom.Value || Scoops.Config.disableDOF.Value || Scoops.Config.disableMotionBlur.Value || Scoops.Config.disableShadows.Value || Scoops.Config.disableMotionVectors.Value || Scoops.Config.disableRefraction.Value || Scoops.Config.disableReflections.Value || Scoops.Config.useCustomShader.Value)
+        if (Scoops.Config.disableBloom.Value || Scoops.Config.disableDOF.Value || Scoops.Config.disableMotionBlur.Value || Scoops.Config.disableShadows.Value || Scoops.Config.disableMotionVectors.Value || Scoops.Config.disableRefraction.Value || Scoops.Config.disableReflections.Value || Scoops.Config.useCustomShader.Value || Scoops.Config.useWIPCustomShader.Value)
         {
             _harmony.PatchAll(typeof(PlayerControllerBSpongePatch));
         }
 
-        if (Scoops.Config.useCustomShader.Value)
+        if (Scoops.Config.useCustomShader.Value || Scoops.Config.useWIPCustomShader.Value)
         {
             _harmony.PatchAll(typeof(HDRenderPipeline_RecordRenderGraph_Patch));
         }
@@ -128,7 +129,6 @@ public class Plugin : BaseUnityPlugin
 
     private void ApplyVerbosePluginPatch()
     {
-        _harmony.PatchAll(typeof(RoundManagerSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleAsyncSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleLoadSpongePatch));
