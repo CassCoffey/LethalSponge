@@ -129,9 +129,12 @@ namespace Scoops.service
             {
                 PerformEvaluation();
             }
-            allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
-            newCount = allObjects.Length;
-            Plugin.Log.LogMessage("There are " + newCount + " loaded objects total.");
+            if (Config.minimalLogging.Value && !Config.verboseLogging.Value)
+            {
+                allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
+                newCount = allObjects.Length;
+                Plugin.Log.LogMessage("There are " + newCount + " loaded objects total.");
+            }
             if (Config.verboseLogging.Value && (mode == SpongeMode.Evaluate || mode == SpongeMode.Full) && newCount > allObjects.Length)
             {
                 Plugin.Log.LogWarning("More objects after evaluating than before. Property calls possibly instantiated unexpected objects.");
@@ -150,30 +153,41 @@ namespace Scoops.service
             if (Config.unloadUnused.Value)
             {
                 Plugin.Log.LogMessage("Resources.UnloadUnusedAssets() completed.");
-                allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
-                int beforeCleanCount = newCount;
-                newCount = allObjects.Length;
-                Plugin.Log.LogMessage("After cleaning there are " + newCount + " loaded objects total.");
-                Plugin.Log.LogMessage("Resources.UnloadUnusedAssets() cleaned up " + (beforeCleanCount - newCount) + " objects.");
+                if (Config.minimalLogging.Value)
+                {
+                    allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
+                    int beforeCleanCount = newCount;
+                    newCount = allObjects.Length;
+                    Plugin.Log.LogMessage("After cleaning there are " + newCount + " loaded objects total.");
+                    Plugin.Log.LogMessage("Resources.UnloadUnusedAssets() cleaned up " + (beforeCleanCount - newCount) + " objects.");
+                }
                 allObjects = [];
             }
 
             stopwatch.Stop();
             TimeSpan elapsedTime = stopwatch.Elapsed;
-            int initialChange = newCount - initialCount;
-            float initialPercentChange = ((float)initialChange / (float)initialCount) * 100f;
-            int prevChange = newCount - prevCount;
-            float prevPercentChange = ((float)prevChange / (float)prevCount) * 100f;
+            if (Config.minimalLogging.Value)
+            {
+                int initialChange = newCount - initialCount;
+                float initialPercentChange = ((float)initialChange / (float)initialCount) * 100f;
+                int prevChange = newCount - prevCount;
+                float prevPercentChange = ((float)prevChange / (float)prevCount) * 100f;
 
-            string qualifier = "more";
-            if (prevChange < 0) qualifier = "less";
+                string qualifier = "more";
+                if (prevChange < 0) qualifier = "less";
 
-            Plugin.Log.LogMessage("Sponge took " + elapsedTime.TotalSeconds + " seconds to execute.");
-            Plugin.Log.LogMessage("There were " + initialChange + " more objects than on initialization, a " + initialPercentChange + "% change.");
-            Plugin.Log.LogMessage("There were " + prevChange + " " + qualifier + " objects than last check, a " + prevPercentChange + "% change.");
+                Plugin.Log.LogMessage("Sponge took " + elapsedTime.TotalSeconds + " seconds to execute.");
+
+                Plugin.Log.LogMessage("There were " + initialChange + " more objects than on initialization, a " + initialPercentChange + "% change.");
+                Plugin.Log.LogMessage("There were " + prevChange + " " + qualifier + " objects than last check, a " + prevPercentChange + "% change.");
+
+                prevCount = newCount;
+            }
+            else
+            {
+                Plugin.Log.LogMessage("Sponge took " + elapsedTime.TotalSeconds + " seconds to execute.");
+            }
             Plugin.Log.LogMessage("---");
-
-            prevCount = newCount;
         }
 
         private static void PerformEvaluation()

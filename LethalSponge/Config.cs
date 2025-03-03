@@ -5,6 +5,7 @@ namespace Scoops
 {
     public class Config
     {
+        public static ConfigEntry<bool> minimalLogging;
         public static ConfigEntry<bool> verboseLogging;
         public static ConfigEntry<bool> ignoreInactiveObjects;
         public static ConfigEntry<string> fullReportList;
@@ -28,6 +29,7 @@ namespace Scoops
 
         public static ConfigEntry<bool> removePosterizationShader;
         public static ConfigEntry<bool> useCustomShader;
+        public static ConfigEntry<bool> useWIPCustomShader;
         public static ConfigEntry<bool> disableDOF;
         public static ConfigEntry<bool> disableMotionBlur;
         public static ConfigEntry<bool> disableBloom;
@@ -59,6 +61,13 @@ namespace Scoops
         public Config(ConfigFile cfg)
         {
             // Investigation
+            minimalLogging = cfg.Bind(
+                    "Investigation",
+                    "minimalLogging",
+                    false,
+                    "If enabled, Sponge will stop logging how many objects were cleaned up. This will reduce the cleanup stutter on day rollover."
+            );
+
             verboseLogging = cfg.Bind(
                     "Investigation",
                     "verboseLogging",
@@ -189,6 +198,12 @@ namespace Scoops
                 "useCustomShader",
                 true,
                 "Should Sponge replace the removed shader with a faster one that looks similar? (Requires removePosterizationShader = true)"
+            );
+            useWIPCustomShader = cfg.Bind(
+                "Rendering",
+                "useWIPCustomShader",
+                false,
+                "Should Sponge replace the removed shader with a Work In Progress one? (Takes precedence over useCustomShader) (Requires removePosterizationShader = true)"
             );
             disableDOF = cfg.Bind(
                 "Rendering",

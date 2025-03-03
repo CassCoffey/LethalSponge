@@ -97,6 +97,7 @@ namespace Scoops.service
                 newVolume = GameObject.Instantiate((GameObject)Plugin.SpongeAssets.LoadAsset("SpongeCustomPass"), oldVolume.transform.parent);
 
                 Plugin.SpongeAssets.LoadAsset("SpongePosterize");
+                Plugin.SpongeAssets.LoadAsset("SpongePosterizeWIP");
                 Plugin.SpongeAssets.LoadAsset("FullScreen_SpongePosterize");
 
                 // here we use the new injection point added by the transpiler
@@ -150,7 +151,7 @@ namespace Scoops.service
             if (Config.shipCameraFramerate.Value != 0)
             {
                 ShipCamera.GetComponent<ManualCameraRenderer>().renderAtLowerFramerate = true;
-                ShipCamera.GetComponent<ManualCameraRenderer>().fps = Config.securityCameraFramerate.Value;
+                ShipCamera.GetComponent<ManualCameraRenderer>().fps = Config.shipCameraFramerate.Value;
                 ShipCamera.GetComponent<HDAdditionalCameraData>().hasPersistentHistory = true;
             }
 

@@ -15,14 +15,23 @@ namespace Scoops.patches
     {
         public static PlayerActions Actions;
 
+        private static bool enabled = false;
+
         public static void Init()
         {
             Actions = new PlayerActions();
-            Actions.Enable();
 
             // These may not help, but they also may help, so they can stay for now
             InputSystem.settings.SetInternalFeatureFlag("USE_OPTIMIZED_CONTROLS", true);
             InputSystem.settings.SetInternalFeatureFlag("USE_READ_VALUE_CACHING", true);
+        }
+
+        public static void Enable()
+        {
+            if (!enabled && Actions != null)
+            {
+                Actions.Enable();
+            }
         }
 
         [HarmonyPatch(typeof(InputActionRebindingExtensions.DeferBindingResolutionWrapper))]
