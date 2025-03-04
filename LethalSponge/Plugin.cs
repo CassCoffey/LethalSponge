@@ -17,7 +17,7 @@ public static class PluginInformation
 {
     public const string PLUGIN_GUID = "LethalSponge";
     public const string PLUGIN_NAME = "LethalSponge";
-    public const string PLUGIN_VERSION = "1.0.5";
+    public const string PLUGIN_VERSION = "1.0.6";
 }
 
 [BepInPlugin(PluginInformation.PLUGIN_GUID, PluginInformation.PLUGIN_NAME, PluginInformation.PLUGIN_VERSION)]
@@ -98,6 +98,11 @@ public class Plugin : BaseUnityPlugin
     {
         _harmony.PatchAll(typeof(StartOfRoundSpongePatch));
         _harmony.PatchAll(typeof(RoundManagerSpongePatch));
+
+        if (Scoops.Config.unloadUnused.Value)
+        {
+            _harmony.PatchAll(typeof(MainMenuSpongePatch));
+        }
 
         if (Scoops.Config.fixFoliageLOD.Value)
         {

@@ -89,6 +89,11 @@ namespace Scoops.patches
             if (__instance.mesh != null && !MeshVisible(player.gameplayCamera, __instance.mesh))
             {
                 __result = false;
+
+                if (__instance.cam == CameraService.SecurityCamera && CameraService.DoorMonitor != null && MeshVisible(player.gameplayCamera, CameraService.DoorMonitor))
+                {
+                    __result = true;
+                }
             }
 
             if (__instance == StartOfRound.Instance.mapScreen)

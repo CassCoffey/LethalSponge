@@ -22,6 +22,8 @@ namespace Scoops.service
         public static GameObject MonitorWall;
         public static GameObject ShipInside;
 
+        public static MeshRenderer DoorMonitor;
+
         public static Terminal MainTerminal;
 
         public static GameObject oldVolume;
@@ -82,6 +84,12 @@ namespace Scoops.service
             if (mainTerminal != default(Terminal))
             {
                 MainTerminal = mainTerminal;
+            }
+
+            MeshRenderer doorMonitor = GameObject.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(x => x.gameObject.name == "SingleScreen" && x.gameObject.tag == "Untagged").FirstOrDefault();
+            if (doorMonitor != default(MeshRenderer))
+            {
+                DoorMonitor = doorMonitor;
             }
 
             return success;

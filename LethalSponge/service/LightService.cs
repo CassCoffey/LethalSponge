@@ -40,7 +40,7 @@ namespace Scoops.service
         {
             if (intensifying)
             {
-                light.intensity = origIntensity * 1.25f;
+                light.intensity = origIntensity * 1.05f;
             } 
             else
             {
