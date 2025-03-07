@@ -88,11 +88,11 @@ namespace Scoops.service
 
                 foreach (HDAdditionalLightData lightData in allLightData)
                 {
-                    lightData.fadeDistance = Math.Clamp(multiplier * lightData.range, 0f, cap);
+                    lightData.fadeDistance = Math.Clamp(multiplier * lightData.range, 5f, cap);
                 }
             }
 
-            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value || Config.useWIPCustomShader.Value))
+            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value))
             {
                 Light[] lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 foreach (Light light in lights)

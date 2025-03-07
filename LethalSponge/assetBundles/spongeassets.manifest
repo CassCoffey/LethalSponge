@@ -1,21 +1,21 @@
 ManifestFileVersion: 0
-CRC: 3104789076
+CRC: 3616746807
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: eba2b463ee57daedc70d580201f74dcb
+    Hash: 3915e1e14d276710d94ef986e3000b76
   TypeTreeHash:
     serializedVersion: 2
     Hash: 0df1dec30b5d061d422d3e6493d27647
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: eba2b463ee57daedc70d580201f74dcb
+    Hash: 3915e1e14d276710d94ef986e3000b76
 HashAppended: 0
 ClassTypes:
 - Class: 48
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Sponge/SpongePosterizeWIP.shader
 - Assets/Sponge/SpongePosterize.shader
+- Assets/Sponge/SpongePosterizeLegacy.shader
 Dependencies: []

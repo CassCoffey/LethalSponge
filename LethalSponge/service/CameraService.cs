@@ -36,10 +36,10 @@ namespace Scoops.service
         {
             Plugin.Log.LogMessage("Finding Ship cameras.");
             bool success = true;
-            Camera mapCamera = GameObject.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(x => x.gameObject.name == "MapCamera" && x.gameObject.tag == "MapCamera").FirstOrDefault();
-            if (mapCamera != default(Camera))
+            Transform mapCamera = StartOfRound.Instance.transform.parent.Find("ItemSystems/MapCamera");
+            if (mapCamera != null)
             {
-                MapCamera = mapCamera;
+                MapCamera = mapCamera.GetComponent<Camera>();
             } 
             else
             {
@@ -47,10 +47,10 @@ namespace Scoops.service
                 success = false;
             }
 
-            Camera shipCamera = GameObject.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(x => x.gameObject.name == "ShipCamera" && x.gameObject.tag == "Untagged").FirstOrDefault();
-            if (shipCamera != default(Camera))
+            Transform shipCamera = StartOfRound.Instance.elevatorTransform.Find("Cameras/ShipCamera");
+            if (shipCamera != null)
             {
-                ShipCamera = shipCamera;
+                ShipCamera = shipCamera.GetComponent<Camera>();
             }
             else
             {
@@ -58,10 +58,10 @@ namespace Scoops.service
                 success = false;
             }
 
-            Camera securityCamera = GameObject.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(x => x.gameObject.name == "SecurityCamera" && x.gameObject.tag == "Untagged").FirstOrDefault();
-            if (securityCamera != default(Camera))
+            Transform securityCamera = StartOfRound.Instance.elevatorTransform.Find("Cameras/FrontDoorSecurityCam/SecurityCamera");
+            if (securityCamera != null)
             {
-                SecurityCamera = securityCamera;
+                SecurityCamera = securityCamera.GetComponent<Camera>();
             }
             else
             {
@@ -69,10 +69,10 @@ namespace Scoops.service
                 success = false;
             }
 
-            GameObject monitorWall = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(x => x.name == "MonitorWall" && x.gameObject.tag == "Untagged").FirstOrDefault();
-            if (monitorWall != default(GameObject))
+            Transform monitorWall = StartOfRound.Instance.elevatorTransform.Find("ShipModels2b/MonitorWall");
+            if (monitorWall != null)
             {
-                MonitorWall = monitorWall;
+                MonitorWall = monitorWall.gameObject;
             }
             else
             {
@@ -80,16 +80,16 @@ namespace Scoops.service
                 success = false;
             }
 
-            Terminal mainTerminal = GameObject.FindObjectsByType<Terminal>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(x => x.gameObject.name == "TerminalScript" && x.gameObject.tag == "InteractTrigger").FirstOrDefault();
-            if (mainTerminal != default(Terminal))
+            Transform mainTerminal = StartOfRound.Instance.elevatorTransform.Find("Terminal/TerminalTrigger/TerminalScript");
+            if (mainTerminal != null)
             {
-                MainTerminal = mainTerminal;
+                MainTerminal = mainTerminal.GetComponent<Terminal>();
             }
 
-            MeshRenderer doorMonitor = GameObject.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(x => x.gameObject.name == "SingleScreen" && x.gameObject.tag == "Untagged").FirstOrDefault();
-            if (doorMonitor != default(MeshRenderer))
+            Transform doorMonitor = StartOfRound.Instance.elevatorTransform.Find("ShipModels2b/MonitorWall/SingleScreen");
+            if (doorMonitor != null)
             {
-                DoorMonitor = doorMonitor;
+                DoorMonitor = doorMonitor.GetComponent<MeshRenderer>();
             }
 
             return success;
@@ -99,7 +99,7 @@ namespace Scoops.service
         {
             oldVolume = GameObject.Find("CustomPass");
 
-            if (Config.useCustomShader.Value || Config.useWIPCustomShader.Value)
+            if (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value)
             {
                 // The old switcharoo
                 newVolume = new GameObject("SpongeCustomPass");

@@ -29,7 +29,7 @@ namespace Scoops
 
         public static ConfigEntry<bool> removePosterizationShader;
         public static ConfigEntry<bool> useCustomShader;
-        public static ConfigEntry<bool> useWIPCustomShader;
+        public static ConfigEntry<bool> useLegacyCustomShader;
         public static ConfigEntry<bool> volumetricCompensation;
         public static ConfigEntry<bool> disableDOF;
         public static ConfigEntry<bool> disableMotionBlur;
@@ -200,11 +200,11 @@ namespace Scoops
                 true,
                 "Should Sponge replace the removed shader with a faster one that looks similar? (Requires removePosterizationShader = true)"
             );
-            useWIPCustomShader = cfg.Bind(
+            useLegacyCustomShader = cfg.Bind(
                 "Rendering",
-                "useWIPCustomShader",
+                "useLegacyCustomShader",
                 false,
-                "Should Sponge replace the removed shader with a Work In Progress one? (Takes precedence over useCustomShader) (Requires removePosterizationShader = true)"
+                "Should Sponge replace the removed shader with the shader from the original sponge release? (Takes precedence over useCustomShader) (Requires removePosterizationShader = true)"
             );
             volumetricCompensation = cfg.Bind(
                 "Rendering",
@@ -284,7 +284,7 @@ namespace Scoops
                 "Graphics Quality",
                 "reflectionAtlasSize",
                 "Resolution1024x1024",
-                new ConfigDescription("What should the texture size be for the the Decal Atlas? (LC default is 16384x8192)", new AcceptableValueList<string>("Resolution512x512", "Resolution1024x512", "Resolution1024x1024", "Resolution2048x1024", "Resolution2048x2048", "Resolution4096x2048"))
+                new ConfigDescription("What should the texture size be for the the Reflection Atlas? (LC default is 16384x8192)", new AcceptableValueList<string>("Resolution512x512", "Resolution1024x512", "Resolution1024x1024", "Resolution2048x1024", "Resolution2048x2048", "Resolution4096x2048"))
             );
             maxCubeReflectionProbes = cfg.Bind(
                 "Graphics Quality",

@@ -17,9 +17,9 @@ namespace Scoops.rendering
 
         public override void Setup(ScriptableRenderContext renderContext, CommandBuffer cmd)
         {
-            if (Config.useWIPCustomShader.Value)
+            if (!Config.useLegacyCustomShader.Value)
             {
-                posterizationShader = (Shader)Plugin.SpongeAssets.LoadAsset("SpongePosterizeWIP");
+                posterizationShader = (Shader)Plugin.SpongeAssets.LoadAsset("SpongePosterize");
 
                 posterizationRT = RTHandles.Alloc(
                     Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
@@ -29,7 +29,7 @@ namespace Scoops.rendering
             }
             else
             {
-                posterizationShader = (Shader)Plugin.SpongeAssets.LoadAsset("SpongePosterize");
+                posterizationShader = (Shader)Plugin.SpongeAssets.LoadAsset("SpongePosterizeLegacy");
 
                 posterizationRT = RTHandles.Alloc(
                     Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
@@ -39,8 +39,6 @@ namespace Scoops.rendering
             }
                 
             posterizationMaterial = CoreUtils.CreateEngineMaterial(posterizationShader);
-
-            
         }
 
         public override void Execute(CustomPassContext ctx) 
