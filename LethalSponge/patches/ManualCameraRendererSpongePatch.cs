@@ -56,7 +56,10 @@ namespace Scoops.patches
             // While the camera is overridden it runs at full framerate, we need to stop that
             if (__instance.overrideCameraForOtherUse)
             {
-                if (__instance.mesh != null && !MeshVisible(GameNetworkManager.Instance.localPlayerController.gameplayCamera, __instance.mesh))
+                PlayerControllerB player = GameNetworkManager.Instance.localPlayerController;
+                Camera currentCamera = player.isPlayerDead ? StartOfRound.Instance.spectateCamera : player.gameplayCamera;
+
+                if (__instance.mesh != null && !MeshVisible(currentCamera, __instance.mesh))
                 {
                     __instance.cam.enabled = false;
                     return;
@@ -65,13 +68,7 @@ namespace Scoops.patches
                 // Just gonna redo this for now, might make it a transpiler later
                 if (__instance.renderAtLowerFramerate)
                 {
-                    __instance.cam.enabled = false;
-                    __instance.elapsed += Time.deltaTime;
-                    if (__instance.elapsed > 1f / __instance.fps)
-                    {
-                        __instance.elapsed = 0f;
-                        __instance.cam.Render();
-                    }
+                    ApplyFramerateCap(__instance);
                 }
                 else
                 {
@@ -85,12 +82,14 @@ namespace Scoops.patches
         [HarmonyPostfix]
         private static void ManualCameraRenderer_MeetsCameraEnabledConditions(ref ManualCameraRenderer __instance, ref bool __result, PlayerControllerB player)
         {
+            Camera currentCamera = player.isPlayerDead ? StartOfRound.Instance.spectateCamera : player.gameplayCamera;
+
             // Recheck the mesh visibility but with a working check 
-            if (__instance.mesh != null && !MeshVisible(player.gameplayCamera, __instance.mesh))
+            if (__instance.mesh != null && !MeshVisible(currentCamera, __instance.mesh))
             {
                 __result = false;
 
-                if (__instance.cam == CameraService.SecurityCamera && CameraService.DoorMonitor != null && MeshVisible(player.gameplayCamera, CameraService.DoorMonitor))
+                if (__instance.cam == CameraService.SecurityCamera && CameraService.DoorMonitor != null && MeshVisible(currentCamera, CameraService.DoorMonitor))
                 {
                     __result = true;
                 }

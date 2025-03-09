@@ -17,7 +17,7 @@ public static class PluginInformation
 {
     public const string PLUGIN_GUID = "LethalSponge";
     public const string PLUGIN_NAME = "LethalSponge";
-    public const string PLUGIN_VERSION = "1.0.8";
+    public const string PLUGIN_VERSION = "1.0.9";
 }
 
 [BepInPlugin(PluginInformation.PLUGIN_GUID, PluginInformation.PLUGIN_NAME, PluginInformation.PLUGIN_VERSION)]
@@ -154,28 +154,52 @@ public class Plugin : BaseUnityPlugin
             settings.supportedLitShaderMode = RenderPipelineSettings.SupportedLitShaderMode.DeferredOnly;
         }
 
-        settings.decalSettings.drawDistance = Scoops.Config.decalDrawDist.Value;
-        settings.decalSettings.atlasHeight = Scoops.Config.decalAtlasSize.Value;
-        settings.decalSettings.atlasWidth = Scoops.Config.decalAtlasSize.Value;
+        // if the settings are set to the highest value/default, don't override
+        if (Scoops.Config.decalDrawDist.Value != 1000)
+        {
+            settings.decalSettings.drawDistance = Scoops.Config.decalDrawDist.Value;
+        }
+        if (Scoops.Config.decalAtlasSize.Value != 4096)
+        {
+            settings.decalSettings.atlasHeight = Scoops.Config.decalAtlasSize.Value;
+            settings.decalSettings.atlasWidth = Scoops.Config.decalAtlasSize.Value;
+        }
 
         //settings.lightLoopSettings.maxLocalVolumetricFogOnScreen = Scoops.Config.maxVolumetricFog.Value;
-        settings.lightLoopSettings.reflectionProbeTexCacheSize = Enum.Parse<ReflectionProbeTextureCacheResolution>(Scoops.Config.reflectionAtlasSize.Value);
-        settings.lightLoopSettings.maxCubeReflectionOnScreen = Scoops.Config.maxCubeReflectionProbes.Value;
-        settings.lightLoopSettings.maxPlanarReflectionOnScreen = Scoops.Config.maxPlanarReflectionProbes.Value;
+        if (Scoops.Config.reflectionAtlasSize.Value != "Resolution16384x8192")
+        {
+            settings.lightLoopSettings.reflectionProbeTexCacheSize = Enum.Parse<ReflectionProbeTextureCacheResolution>(Scoops.Config.reflectionAtlasSize.Value);
+        }
+        if (Scoops.Config.maxCubeReflectionProbes.Value != 48)
+        {
+            settings.lightLoopSettings.maxCubeReflectionOnScreen = Scoops.Config.maxCubeReflectionProbes.Value;
+        }
+        if (Scoops.Config.maxPlanarReflectionProbes.Value != 16)
+        {
+            settings.lightLoopSettings.maxPlanarReflectionOnScreen = Scoops.Config.maxPlanarReflectionProbes.Value;
+        }
         // disabled until I have a distance based light culling system
         //settings.lightLoopSettings.maxDirectionalLightsOnScreen = Scoops.Config.maxDirectionalLights.Value;
         //settings.lightLoopSettings.maxPunctualLightsOnScreen = Scoops.Config.maxPunctualLights.Value;
         //settings.lightLoopSettings.maxAreaLightsOnScreen = Scoops.Config.maxAreaLights.Value;
 
-        settings.hdShadowInitParams.maxPunctualShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
-        settings.hdShadowInitParams.maxDirectionalShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
-        settings.hdShadowInitParams.maxAreaShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
-        settings.hdShadowInitParams.punctualLightShadowAtlas.shadowAtlasResolution = Scoops.Config.shadowsAtlasSize.Value;
-        settings.hdShadowInitParams.cachedPunctualLightShadowAtlas = Scoops.Config.shadowsAtlasSize.Value / 2; // Just make it half size for now
-        settings.hdShadowInitParams.areaLightShadowAtlas.shadowAtlasResolution = Scoops.Config.shadowsAtlasSize.Value;
-        settings.hdShadowInitParams.cachedAreaLightShadowAtlas = Scoops.Config.shadowsAtlasSize.Value / 2;
-
-        settings.lightingQualitySettings.Fog_Budget[QualitySettings.GetQualityLevel()] = Scoops.Config.fogBudget.Value;
+        if (Scoops.Config.shadowsMaxResolution.Value != 2048)
+        {
+            settings.hdShadowInitParams.maxPunctualShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
+            settings.hdShadowInitParams.maxDirectionalShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
+            settings.hdShadowInitParams.maxAreaShadowMapResolution = Scoops.Config.shadowsMaxResolution.Value;
+        }
+        if (Scoops.Config.shadowsAtlasSize.Value != 4096)
+        {
+            settings.hdShadowInitParams.punctualLightShadowAtlas.shadowAtlasResolution = Scoops.Config.shadowsAtlasSize.Value;
+            settings.hdShadowInitParams.cachedPunctualLightShadowAtlas = Scoops.Config.shadowsAtlasSize.Value / 2; // Just make it half size for now
+            settings.hdShadowInitParams.areaLightShadowAtlas.shadowAtlasResolution = Scoops.Config.shadowsAtlasSize.Value;
+            settings.hdShadowInitParams.cachedAreaLightShadowAtlas = Scoops.Config.shadowsAtlasSize.Value / 2;
+        }
+        if (Scoops.Config.fogBudget.Value != 0.17f)
+        {
+            settings.lightingQualitySettings.Fog_Budget[QualitySettings.GetQualityLevel()] = Scoops.Config.fogBudget.Value;
+        }
 
         ((HDRenderPipelineAsset)GraphicsSettings.currentRenderPipeline).m_RenderPipelineSettings = settings;
         ((HDRenderPipelineAsset)GraphicsSettings.currentRenderPipeline).OnValidate();

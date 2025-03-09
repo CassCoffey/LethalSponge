@@ -266,7 +266,7 @@ namespace Scoops
                 "Graphics Quality",
                 "decalDrawDist",
                 100,
-                new ConfigDescription("What should the maximum distance be for drawing decals like blood splatters? (LC default is 1000)", new AcceptableValueRange<int>(50, 100))
+                new ConfigDescription("What should the maximum distance be for drawing decals like blood splatters? (LC default is 1000)", new AcceptableValueRange<int>(50, 1000))
             );
             decalAtlasSize = cfg.Bind(
                 "Graphics Quality",
@@ -284,7 +284,7 @@ namespace Scoops
                 "Graphics Quality",
                 "reflectionAtlasSize",
                 "Resolution1024x1024",
-                new ConfigDescription("What should the texture size be for the the Reflection Atlas? (LC default is 16384x8192)", new AcceptableValueList<string>("Resolution512x512", "Resolution1024x512", "Resolution1024x1024", "Resolution2048x1024", "Resolution2048x2048", "Resolution4096x2048"))
+                new ConfigDescription("What should the texture size be for the the Reflection Atlas? (LC default is 16384x8192)", new AcceptableValueList<string>("Resolution512x512", "Resolution1024x512", "Resolution1024x1024", "Resolution2048x1024", "Resolution2048x2048", "Resolution4096x2048", "Resolution16384x8192"))
             );
             maxCubeReflectionProbes = cfg.Bind(
                 "Graphics Quality",
@@ -320,7 +320,7 @@ namespace Scoops
                 "Graphics Quality",
                 "shadowsMaxResolution",
                 256,
-                new ConfigDescription("What should the maximum resolution be for Shadow Maps? (LC default is 1024)", new AcceptableValueList<int>(64, 128, 256, 512, 1024))
+                new ConfigDescription("What should the maximum resolution be for Shadow Maps? (LC default is 2048)", new AcceptableValueList<int>(64, 128, 256, 512, 1024, 2048))
             );
             shadowsAtlasSize = cfg.Bind(
                 "Graphics Quality",
@@ -332,7 +332,7 @@ namespace Scoops
                 "Graphics Quality",
                 "fogBudget",
                 0.15f,
-                new ConfigDescription("What should the budget (0-1) be for the volumetric fog? (LC default is 0.166) (WARNING: Lowering this will make fog less dangerous)", new AcceptableValueRange<float>(0.05f, 0.17f))
+                new ConfigDescription("What should the budget (0-1) be for the volumetric fog? (LC default is 0.166) (Lowering this may make fog less dangerous)", new AcceptableValueRange<float>(0.05f, 0.17f))
             );
             deferredOnly = cfg.Bind(
                 "Graphics Quality",
