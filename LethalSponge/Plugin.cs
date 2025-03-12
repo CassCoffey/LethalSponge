@@ -17,7 +17,7 @@ public static class PluginInformation
 {
     public const string PLUGIN_GUID = "LethalSponge";
     public const string PLUGIN_NAME = "LethalSponge";
-    public const string PLUGIN_VERSION = "1.0.9";
+    public const string PLUGIN_VERSION = "1.1.0";
 }
 
 [BepInPlugin(PluginInformation.PLUGIN_GUID, PluginInformation.PLUGIN_NAME, PluginInformation.PLUGIN_VERSION)]
@@ -71,6 +71,11 @@ public class Plugin : BaseUnityPlugin
         }
 
         AlterQualitySettings();
+
+        if (Scoops.Config.fixComplexMeshes.Value || Scoops.Config.generateLODs.Value)
+        {
+            MeshService.Init();
+        }
     }
 
     public IEnumerator RegisterAssetBundlesStale()
@@ -122,6 +127,11 @@ public class Plugin : BaseUnityPlugin
         if (Scoops.Config.useCustomShader.Value || Scoops.Config.useLegacyCustomShader.Value)
         {
             _harmony.PatchAll(typeof(HDRenderPipeline_RecordRenderGraph_Patch));
+            if (Scoops.Config.volumetricCompensation.Value)
+            {
+                _harmony.PatchAll(typeof(LightService));
+                _harmony.PatchAll(typeof(TeleportPatches));
+            }
         }
 
         if (Scoops.Config.fixInputActions.Value)
@@ -129,6 +139,11 @@ public class Plugin : BaseUnityPlugin
             InputActionSpongePatches.Init();
             _harmony.PatchAll(typeof(InputActionSpongePatches));
             Plugin.Log.LogInfo("Input Actions Patched");
+        }
+
+        if (Scoops.Config.generateLODs.Value || Scoops.Config.fixComplexMeshes.Value)
+        {
+            _harmony.PatchAll(typeof(GrabbableObjectPatches));
         }
     }
 

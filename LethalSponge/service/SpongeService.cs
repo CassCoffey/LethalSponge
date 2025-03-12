@@ -420,7 +420,8 @@ namespace Scoops.service
 
                 if (vertexCount > 1000)
                 {
-                    float cubedMeters = meshRenderer.bounds.size.x * meshRenderer.bounds.size.y * meshRenderer.bounds.size.z;
+                    float largestDimension = Mathf.Max(meshRenderer.bounds.size.x, Mathf.Max(meshRenderer.bounds.size.y, meshRenderer.bounds.size.z));
+                    float cubedMeters = largestDimension * largestDimension * largestDimension;
                     float vertPerMeter = (float)vertexCount / cubedMeters;
 
                     if (vertPerMeter > 5000f)

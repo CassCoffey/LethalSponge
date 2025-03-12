@@ -1,5 +1,10 @@
-﻿using System;
+﻿using GameNetcodeStuff;
+using HarmonyLib;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Reflection;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Rendering.HighDefinition;
@@ -21,6 +26,11 @@ namespace Scoops.service
         {
             // Do nothing
         }
+
+        public void OnDestroy()
+        {
+            toggle -= ToggleIntensify;
+        }
     }
 
     public class LightModifier : Modifier
@@ -38,6 +48,12 @@ namespace Scoops.service
 
         public override void ToggleIntensify()
         {
+            if (light == null)
+            {
+                GameObject.Destroy(this);
+                return;
+            }
+
             if (intensifying)
             {
                 light.intensity = origIntensity * 1.05f;
@@ -64,6 +80,12 @@ namespace Scoops.service
 
         public override void ToggleIntensify()
         {
+            if (fog == null)
+            {
+                GameObject.Destroy(this);
+                return;
+            }
+
             if (intensifying)
             {
                 fog.parameters.meanFreePath = origDistance * 0.6f;
@@ -77,6 +99,8 @@ namespace Scoops.service
 
     public static class LightService
     {
+        public static string planetName;
+
         public static void UpdateAllLights()
         {
             if (Config.changeLightFadeDistance.Value)
@@ -111,6 +135,24 @@ namespace Scoops.service
                         fog.gameObject.AddComponent<FogModifier>();
                     }
                 }
+
+                planetName = (new string(RoundManager.Instance.currentLevel.PlanetName.SkipWhile((char c) => !char.IsLetter(c)).ToArray())).Trim().ToLower();
+
+                CheckCompensationStatus(GameNetworkManager.Instance.localPlayerController);
+            }
+        }
+
+        public static void CheckCompensationStatus(PlayerControllerB player)
+        {
+            if (player != null && planetName != null && Config.compensationMoonBlacklist.Value.Split(';').Contains(planetName))
+            {
+                PlayerControllerB focusedPlayer = player;
+                if (focusedPlayer.isPlayerDead && focusedPlayer.spectatedPlayerScript != null) focusedPlayer = focusedPlayer.spectatedPlayerScript;
+                SetLightIntensity(focusedPlayer.isInsideFactory);
+            }
+            else
+            {
+                SetLightIntensity(true);
             }
         }
 
@@ -120,6 +162,80 @@ namespace Scoops.service
             {
                 Modifier.intensifying = !Modifier.intensifying;
                 Modifier.toggle.Invoke();
+            }
+        }
+
+        public static void SetLightIntensity(bool enabled)
+        {
+            if (Modifier.toggle != null)
+            {
+                Plugin.Log.LogInfo("Setting light intensity - " + enabled);
+                Modifier.intensifying = enabled;
+                Modifier.toggle.Invoke();
+            }
+        }
+
+        [HarmonyPatch(typeof(PlayerControllerB))]
+        [HarmonyPatch("KillPlayer")]
+        [HarmonyPostfix]
+        public static void PlayerControllerB_KillPlayer(ref PlayerControllerB __instance)
+        {
+            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value))
+            {
+                if ((!__instance.IsOwner || !__instance.isPlayerControlled || (__instance.IsServer && !__instance.isHostPlayerObject)) && !__instance.isTestingPlayer)
+                {
+                    return;
+                }
+
+                CheckCompensationStatus(__instance);
+            }
+        }
+
+        [HarmonyPatch(typeof(PlayerControllerB))]
+        [HarmonyPatch("SpectateNextPlayer")]
+        [HarmonyPostfix]
+        public static void PlayerControllerB_SpectateNextPlayer(ref PlayerControllerB __instance)
+        {
+            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value))
+            {
+                if ((!__instance.IsOwner || !__instance.isPlayerControlled || (__instance.IsServer && !__instance.isHostPlayerObject)) && !__instance.isTestingPlayer)
+                {
+                    return;
+                }
+
+                CheckCompensationStatus(__instance);
+            }
+        }
+
+        [HarmonyPatch(typeof(StartOfRound))]
+        [HarmonyPatch("EndOfGameClientRpc")]
+        [HarmonyPostfix]
+        public static void StartOfRound_EndOfGameClientRpc(ref StartOfRound __instance)
+        {
+            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value))
+            {
+                planetName = null;
+                SetLightIntensity(true);
+            }
+        }
+    }
+
+    [HarmonyPatch]
+    class TeleportPatches
+    {
+        static IEnumerable<MethodBase> TargetMethods() => new[]
+        {
+            AccessTools.Method(typeof(EntranceTeleport), "TeleportPlayer"),
+            AccessTools.Method(typeof(ShipTeleporter), "beamUpPlayer"),
+            AccessTools.Method(typeof(ShipTeleporter), "TeleportPlayerOutWithInverseTeleporter"),
+            AccessTools.Method(typeof(StartOfRound), "ReviveDeadPlayers"),
+        };
+
+        static void Postfix()
+        {
+            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value))
+            {
+                LightService.CheckCompensationStatus(GameNetworkManager.Instance.localPlayerController);
             }
         }
     }

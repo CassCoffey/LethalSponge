@@ -17,10 +17,23 @@ namespace Scoops
         public static ConfigEntry<bool> fixFoliageLOD;
         public static ConfigEntry<bool> fixInputActions;
 
+        public static ConfigEntry<bool> generateLODs;
+        public static ConfigEntry<float> LOD1Start;
+        public static ConfigEntry<float> LOD2Start;
+        public static ConfigEntry<float> LOD1Quality;
+        public static ConfigEntry<float> LOD2Quality;
+        public static ConfigEntry<float> cullStart;
+        public static ConfigEntry<bool> fixComplexMeshes;
+        public static ConfigEntry<bool> preserveSurfaceCurvature;
+
+        public static ConfigEntry<bool> resizeTextures;
+        public static ConfigEntry<int> maxTextureSize;
+
         public static ConfigEntry<bool> fixCameraSettings;
         public static ConfigEntry<bool> applyShipCameraQualityOverrides;
         public static ConfigEntry<bool> applySecurityCameraQualityOverrides;
         public static ConfigEntry<bool> applyMapCameraQualityOverrides;
+        public static ConfigEntry<bool> cameraRenderTransparent;
         public static ConfigEntry<bool> patchCameraScript;
         public static ConfigEntry<float> securityCameraCullDistance;
         public static ConfigEntry<int> mapCameraFramerate;
@@ -31,6 +44,7 @@ namespace Scoops
         public static ConfigEntry<bool> useCustomShader;
         public static ConfigEntry<bool> useLegacyCustomShader;
         public static ConfigEntry<bool> volumetricCompensation;
+        public static ConfigEntry<string> compensationMoonBlacklist;
         public static ConfigEntry<bool> disableDOF;
         public static ConfigEntry<bool> disableMotionBlur;
         public static ConfigEntry<bool> disableBloom;
@@ -65,45 +79,39 @@ namespace Scoops
             minimalLogging = cfg.Bind(
                     "Investigation",
                     "minimalLogging",
-                    false,
+                    true,
                     "If enabled, Sponge will stop logging how many objects were cleaned up. This will reduce the cleanup stutter on day rollover."
             );
-
             verboseLogging = cfg.Bind(
                     "Investigation",
                     "verboseLogging",
                     false,
                     "Whether Sponge should output detailed information about possible leak sources. (COSTLY FOR PERFORMANCE, ONLY ENABLE WHILE DEBUGGING)."
             );
-
             ignoreInactiveObjects = cfg.Bind(
                     "Investigation",
                     "ignoreInactiveObjects",
                     true,
                     "Whether Sponge should exclude gameobjects/behaviors that are inactive from totals."
             );
-
             fullReportList = cfg.Bind(
                     "Investigation",
                     "fullReportList",
                     "",
                     "Bundles/Scenes in this semicolon-separated list will have all objects' Name and ID printed each check. Use 'unknown' for basegame/unknown sources."
             );
-
             assetbundleBlacklist = cfg.Bind(
                     "Investigation",
                     "assetbundleBlacklist",
                     "",
                     "Any objects originating from assetbundles/scenes in this list will never be reported. Use 'unknown' for basegame/unknown sources."
             );
-
             assetbundleWhitelist = cfg.Bind(
                     "Investigation",
                     "assetbundleWhitelist",
                     "",
                     "ONLY objects originating from assetbundles/scenes in this list will be reported. This takes precedence over the Blacklist. Use 'unknown' for basegame/unknown sources."
             );
-
             propertyBlacklist = cfg.Bind(
                     "Investigation",
                     "propertyBlacklist",
@@ -131,6 +139,70 @@ namespace Scoops
                     "Should Sponge fix the repeated instantiation of PlayerActions that would cause additional input lag every time a game is loaded?"
             );
 
+            // Meshes
+            generateLODs = cfg.Bind(
+                    "Meshes",
+                    "generateLODs",
+                    true,
+                    "Should Sponge automatically generate LODs for meshes? (Will increase load times and memory usage slightly)"
+            );
+            LOD1Start = cfg.Bind(
+                    "Meshes",
+                    "LOD1Start",
+                    0.2f,
+                    new ConfigDescription("Where should the first LOD start? (Measured in mesh size on screen) (requires generateLODs = true)", new AcceptableValueRange<float>(0f, 1f))
+            );
+            LOD1Quality = cfg.Bind(
+                    "Meshes",
+                    "LOD1Quality",
+                    0.5f,
+                    new ConfigDescription("What quality level the first LOD be? (requires generateLODs = true)", new AcceptableValueRange<float>(0f, 1f))
+            );
+            LOD2Start = cfg.Bind(
+                    "Meshes",
+                    "LOD2Start",
+                    0.08f,
+                    new ConfigDescription("Where should the second LOD start? (Measured in mesh size on screen) (requires generateLODs = true)", new AcceptableValueRange<float>(0f, 1f))
+            );
+            LOD2Quality = cfg.Bind(
+                    "Meshes",
+                    "LOD2Quality",
+                    0.15f,
+                    new ConfigDescription("What quality level the second LOD be? (requires generateLODs = true)", new AcceptableValueRange<float>(0f, 1f))
+            );
+            cullStart = cfg.Bind(
+                    "Meshes",
+                    "cullStart",
+                    0.02f,
+                    "Where should the last/cull LOD start? (Measured in mesh size on screen) (requires generateLODs = true)"
+            );
+            fixComplexMeshes = cfg.Bind(
+                    "Meshes",
+                    "fixComplexMeshes",
+                    true,
+                    "Should Sponge reduce vertex counts of overly complex meshes? (Will increase load times and memory usage slightly)"
+            );
+            preserveSurfaceCurvature = cfg.Bind(
+                    "Meshes",
+                    "preserveSurfaceCurvature",
+                    false,
+                    "More accurate mesh simplification, but is more CPU intensive to run. (Requires generateLODs or fixComplexMeshes)"
+            );
+
+            // Textures
+            resizeTextures = cfg.Bind(
+                    "Textures",
+                    "resizeTextures",
+                    true,
+                    "Should Sponge automatically resize textures to fit the ? (Will increase load times)"
+            );
+            maxTextureSize = cfg.Bind(
+                    "Textures",
+                    "maxTextureSize",
+                    1024,
+                    "All textures with height over this number will be resized down to this number."
+            );
+
             // Cameras
             fixCameraSettings = cfg.Bind(
                     "Cameras",
@@ -155,6 +227,12 @@ namespace Scoops
                     "applyMapCameraQualityOverrides",
                     true,
                     "Should Sponge disable extra HDRP rendering features on the Map camera? (Requires fixCameraSettings = true)"
+            );
+            cameraRenderTransparent = cfg.Bind(
+                    "Cameras",
+                    "cameraRenderTransparent",
+                    true,
+                    "Should the Ship and Security camera render transparent objects? (Requires applyShipCameraQualityOverrides or applySecurityCameraQualityOverrides)"
             );
             patchCameraScript = cfg.Bind(
                     "Cameras",
@@ -211,6 +289,12 @@ namespace Scoops
                 "volumetricCompensation",
                 true,
                 "Should Sponge adjust all of the lights/fog to be more intense to make up for the changes in the custom shader? (Requires useCustomShader or useWIPCustomShader = true)"
+            );
+            compensationMoonBlacklist = cfg.Bind(
+                "Rendering",
+                "compensationMoonBlacklist",
+                "",
+                "Moons in this semicolon-separated list will have Volmetric Compensation disabled on the exterior of the moon. Use this if a modded moon is too foggy. (Requires volumetricCompensation = true)"
             );
             disableDOF = cfg.Bind(
                 "Rendering",

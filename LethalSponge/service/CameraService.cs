@@ -133,7 +133,17 @@ namespace Scoops.service
                 newPass.enabled = !oldPass.enabled;
                 Plugin.Log.LogMessage((newPass.enabled ? "Enabling" : "Disabling") + " Sponge custom shader.");
 
-                LightService.ToggleLightIntensity();
+                if (Config.volumetricCompensation.Value)
+                {
+                    if (newPass.enabled)
+                    {
+                        LightService.CheckCompensationStatus(GameNetworkManager.Instance.localPlayerController);
+                    }
+                    else
+                    {
+                        LightService.SetLightIntensity(false);
+                    }
+                }
             }
         }
 
@@ -204,7 +214,7 @@ namespace Scoops.service
             }
             hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.MaterialQualityLevel] = true;
             hdCameraData.renderingPathCustomFrameSettings.materialQuality = MaterialQuality.Low;
-            if (!mapCamera) hdCameraData.DisableHDField(FrameSettingsField.TransparentObjects);
+            if (!mapCamera || !Config.cameraRenderTransparent.Value) hdCameraData.DisableHDField(FrameSettingsField.TransparentObjects);
             hdCameraData.DisableHDField(FrameSettingsField.Decals);
             hdCameraData.DisableHDField(FrameSettingsField.TransparentPrepass);
             hdCameraData.DisableHDField(FrameSettingsField.TransparentPostpass);
@@ -239,6 +249,8 @@ namespace Scoops.service
             hdCameraData.DisableHDField(FrameSettingsField.SSAO);
             hdCameraData.DisableHDField(FrameSettingsField.Transmission);
             hdCameraData.DisableHDField(FrameSettingsField.AtmosphericScattering);
+            hdCameraData.DisableHDField(FrameSettingsField.Volumetrics);
+            hdCameraData.DisableHDField(FrameSettingsField.ReprojectionForVolumetrics);
             hdCameraData.DisableHDField(FrameSettingsField.ReflectionProbe);
             hdCameraData.DisableHDField(FrameSettingsField.PlanarProbe);
             hdCameraData.DisableHDField(FrameSettingsField.SkyReflection);

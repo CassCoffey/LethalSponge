@@ -39,6 +39,11 @@ namespace Scoops.patches
             {
                 CameraService.DisablePosterization();
             }
+
+            //if (Config.resizeTextures.Value)
+            //{
+            //    TextureService.ResizeAllTextures();
+            //}
         }
 
         [HarmonyPatch("PassTimeToNextDay")]
@@ -117,6 +122,15 @@ namespace Scoops.patches
                 {
                     __instance.AddChatMessage("Toggling Sponge custom shader.");
                     CameraService.TogglePasses();
+                    return false;
+                }
+            }
+
+            if (chatMessage.ToLower() == "/sponge resize")
+            {
+                if (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value)
+                {
+                    TextureService.ResizeAllTextures();
                     return false;
                 }
             }

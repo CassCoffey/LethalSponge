@@ -24,6 +24,11 @@ namespace Scoops.patches
             {
                 LightService.UpdateAllLights();
             }
+
+            if (Config.resizeTextures.Value)
+            {
+                TextureService.ResizeAllTextures();
+            }
         }
     }
 }
