@@ -1,53 +1,61 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 
 namespace Scoops.service
 {
     public static class TextureService
     {
-        public static Dictionary<string, Texture2D> ResizedTextures = new Dictionary<string, Texture2D>();
+        public static Dictionary<string, Texture2D> TextureDict = new Dictionary<string, Texture2D>();
+        public static List<Texture2D> dupedTextures = new List<Texture2D>();
 
         public static void ResizeAllTextures()
         {
-            //Renderer[] allRenderers = GameObject.FindObjectsByType<Renderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            Renderer[] allRenderers = Resources.FindObjectsOfTypeAll<Renderer>();
-
-            foreach(Renderer renderer in allRenderers)
+            Material[] allMaterials = Resources.FindObjectsOfTypeAll<Material>();
+            foreach (Material material in allMaterials)
             {
-                foreach(Material material in renderer.sharedMaterials)
+                if (material != null)
                 {
-                    if (material != null)
+                    Shader materialShader = material.shader;
+                    if (materialShader != null && (materialShader.name != "TextMeshPro/Distance Field" && materialShader.name != "TextMeshPro/Mobile/Distance Field"))
                     {
-                        Shader materialShader = material.shader;
-                        if (materialShader != null)
+                        for (int i = 0; i < materialShader.GetPropertyCount(); i++)
                         {
-                            for (int i = 0; i < materialShader.GetPropertyCount(); i++)
+                            if (materialShader.GetPropertyType(i) == UnityEngine.Rendering.ShaderPropertyType.Texture)
                             {
-                                if (materialShader.GetPropertyType(i) == UnityEngine.Rendering.ShaderPropertyType.Texture)
+                                Texture texture = material.GetTexture(materialShader.GetPropertyName(i));
+                                if (texture != null && texture is Texture2D)
                                 {
-                                    Texture texture = material.GetTexture(materialShader.GetPropertyName(i));
-                                    if (texture != null && texture is Texture2D)
+                                    try
                                     {
-                                        try
+                                        if (TextureDict.TryGetValue(texture.name, out Texture2D processedTex) && processedTex.GetInstanceID() == texture.GetInstanceID())
                                         {
-                                            if (ResizedTextures.TryGetValue(texture.name, out Texture2D resizedTex))
-                                            {
-                                                material.SetTexture(materialShader.GetPropertyName(i), resizedTex);
-                                                Resources.UnloadAsset(texture);
-                                            }
-                                            else if (texture.height > Config.maxTextureSize.Value || texture.width > Config.maxTextureSize.Value)
-                                            {
-                                                material.SetTexture(materialShader.GetPropertyName(i), GetResizedTexture((Texture2D)texture));
-                                                Resources.UnloadAsset(texture);
-                                            }
+                                            // Already processed
                                         }
-                                        catch (Exception e)
+                                        else if (TextureDict.TryGetValue(texture.name, out Texture2D dedupedTex))
                                         {
-                                            Plugin.Log.LogWarning("Error while resizing Texture " + texture.name + ", continuing:");
-                                            Plugin.Log.LogWarning(e);
+                                            material.SetTexture(materialShader.GetPropertyName(i), dedupedTex);
+                                            dupedTextures.Add((Texture2D)texture);
                                         }
+                                        else if (texture.height > Config.maxTextureSize.Value || texture.width > Config.maxTextureSize.Value)
+                                        {
+                                            Texture2D resizedTex = GetResizedTexture((Texture2D)texture);
+                                            material.SetTexture(materialShader.GetPropertyName(i), resizedTex);
+                                            AddToTextureDict(texture.name, resizedTex);
+                                            dupedTextures.Add((Texture2D)texture);
+                                        }
+                                        else
+                                        {
+                                            AddToTextureDict(texture.name, (Texture2D)texture);
+                                        }
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Plugin.Log.LogWarning("Error while resizing Texture " + texture.name + ", continuing:");
+                                        Plugin.Log.LogWarning(e);
                                     }
                                 }
                             }
@@ -55,6 +63,20 @@ namespace Scoops.service
                     }
                 }
             }
+
+            foreach (Texture2D dupedTex in dupedTextures)
+            {
+                GameObject.Destroy(dupedTex);
+                Resources.UnloadAsset(dupedTex);
+            }
+
+            dupedTextures = [];
+        }
+
+        public static void AddToTextureDict(string name, Texture2D tex)
+        {
+            if (name == "" || Config.deDupeTextureBlacklist.Value.ToLower().Trim().Split(';').Contains(name)) return;
+            TextureDict.Add(name, tex);
         }
 
         public static Texture2D GetResizedTexture(Texture2D texture)
@@ -66,18 +88,18 @@ namespace Scoops.service
             int width = Mathf.RoundToInt(texture.width * scale);
             int height = Mathf.RoundToInt(texture.height * scale);
 
-            RenderTexture rt = RenderTexture.GetTemporary(width, height, 0, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_SRGB);
+            GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB;
+
+            RenderTexture rt = RenderTexture.GetTemporary(width, height, 0, format);
 
             Graphics.Blit(texture, rt);
 
             RenderTexture.active = rt;
-            Texture2D result = new Texture2D(width, height, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_SRGB, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
+            Texture2D result = new Texture2D(width, height, format, TextureCreationFlags.None);
             result.name = texture.name + "_resized";
             result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
             result.Apply(false, true);
             RenderTexture.ReleaseTemporary(rt);
-
-            ResizedTextures.Add(texture.name, result);
 
             return result;
         }

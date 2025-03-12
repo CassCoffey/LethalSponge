@@ -477,8 +477,17 @@ namespace UnityMeshSimplifier
             // Simplify the mesh if necessary
             if (level.Quality < 1f)
             {
-                mesh = SimplifyMesh(mesh, level.Quality, simplificationOptions);
-                mesh.UploadMeshData(true);
+                MeshInfo meshInfo = new MeshInfo(mesh.name + "_" + level.Quality, mesh.vertexCount);
+                if (MeshService.lodMeshDict.TryGetValue(meshInfo, out Mesh generatedLOD))
+                {
+                    mesh = generatedLOD;
+                }
+                else
+                {
+                    mesh = SimplifyMesh(mesh, level.Quality, simplificationOptions);
+                    mesh.UploadMeshData(true);
+                    MeshService.lodMeshDict.Add(meshInfo, mesh);
+                }
 
 #if UNITY_EDITOR
                 SaveLODMeshAsset(mesh, gameObject.name, renderer.name, levelIndex, mesh.name, saveAssetsPath);

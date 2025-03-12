@@ -131,6 +131,9 @@ namespace Scoops.patches
                 if (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value)
                 {
                     TextureService.ResizeAllTextures();
+                    AudioService.DedupeAllAudio();
+                    ShaderService.DedupeAllShaders();
+                    MeshService.DedupeAllMeshes();
                     return false;
                 }
             }

@@ -26,6 +26,8 @@ namespace Scoops
         public static ConfigEntry<bool> fixComplexMeshes;
         public static ConfigEntry<bool> preserveSurfaceCurvature;
 
+        public static ConfigEntry<bool> deDupeTextures;
+        public static ConfigEntry<string> deDupeTextureBlacklist;
         public static ConfigEntry<bool> resizeTextures;
         public static ConfigEntry<int> maxTextureSize;
 
@@ -190,11 +192,23 @@ namespace Scoops
             );
 
             // Textures
+            deDupeTextures = cfg.Bind(
+                    "Textures",
+                    "deDupeTextures",
+                    true,
+                    "Should Sponge automatically remove duplicate textures? (Will increase load times)"
+            );
+            deDupeTextureBlacklist = cfg.Bind(
+                    "Textures",
+                    "deDupeTextureBlacklist",
+                    "playersuittex2b",
+                    "Texture names in this semicolon-separated list will be exempt from de-duping."
+            );
             resizeTextures = cfg.Bind(
                     "Textures",
                     "resizeTextures",
                     true,
-                    "Should Sponge automatically resize textures to fit the ? (Will increase load times)"
+                    "Should Sponge automatically resize textures to fit the maxTextureSize? (Will increase load times)"
             );
             maxTextureSize = cfg.Bind(
                     "Textures",

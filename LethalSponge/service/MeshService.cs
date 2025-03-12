@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Unity.Netcode;
@@ -12,11 +13,67 @@ using UnityMeshSimplifier;
 
 namespace Scoops.service
 {
+    public class MeshInfo
+    {
+        public string name;
+        public int vertices;
+
+        public MeshInfo(string name, int vertices)
+        {
+            this.name = name;
+            this.vertices = vertices;
+        }
+
+        public override bool Equals(object obj) => this.Equals(obj as MeshInfo);
+
+        public bool Equals(MeshInfo m)
+        {
+            if (m is null)
+            {
+                return false;
+            }
+            if (System.Object.ReferenceEquals(this, m))
+            {
+                return true;
+            }
+            if (this.GetType() != m.GetType())
+            {
+                return false;
+            }
+
+            return (name == m.name) && (vertices == m.vertices);
+        }
+
+        public override int GetHashCode() => (name, vertices).GetHashCode();
+
+        public static bool operator ==(MeshInfo lhs, MeshInfo rhs)
+        {
+            if (lhs is null)
+            {
+                if (rhs is null)
+                {
+                    return true;
+                }
+
+                // Only the left side is null.
+                return false;
+            }
+            // Equals handles case of null on right side.
+            return lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(MeshInfo lhs, MeshInfo rhs) => !(lhs == rhs);
+    }
+
     public static class MeshService
     {
         public static Dictionary<int, Mesh> decimatedMeshDict = new Dictionary<int, Mesh>();
+        public static Dictionary<MeshInfo, Mesh> lodMeshDict = new Dictionary<MeshInfo, Mesh>();
         public static HashSet<int> decimatedMeshes = new HashSet<int>();
         public static HashSet<int> generatedLODs = new HashSet<int>();
+
+        public static Dictionary<MeshInfo, Mesh> MeshDict = new Dictionary<MeshInfo, Mesh>();
+        public static List<Mesh> dupedMesh = new List<Mesh>();
 
         public static LayerMask LODlayers = LayerMask.GetMask("Props", "Default", "Enemies");
 
@@ -84,6 +141,50 @@ namespace Scoops.service
             meshSimplifier.SimplificationOptions = simplificationOptions;
 
             initialized = true;
+        }
+
+        public static void DedupeAllMeshes()
+        {
+            MeshFilter[] allMeshFilters = Resources.FindObjectsOfTypeAll<MeshFilter>();
+            foreach (MeshFilter meshFilter in allMeshFilters)
+            {
+                if (meshFilter != null && meshFilter.sharedMesh != null)
+                {
+                    MeshInfo meshInfo = new MeshInfo(meshFilter.sharedMesh.name, meshFilter.sharedMesh.vertexCount);
+                    if (MeshDict.TryGetValue(meshInfo, out Mesh processedMesh) && processedMesh.GetInstanceID() == meshFilter.sharedMesh.GetInstanceID())
+                    {
+                        // Already processed
+                    }
+                    else if (MeshDict.TryGetValue(meshInfo, out Mesh dedupedMesh))
+                    {
+                        dupedMesh.Add(meshFilter.sharedMesh);
+                        meshFilter.sharedMesh = dedupedMesh;
+                    }
+                    else
+                    {
+                        AddToMeshDict(meshInfo, meshFilter.sharedMesh);
+                    }
+                }
+            }
+
+            CleanDupedMeshes();
+        }
+
+        public static void AddToMeshDict(MeshInfo info, Mesh mesh)
+        {
+            if (info.name == "" || Config.deDupeTextureBlacklist.Value.ToLower().Trim().Split(';').Contains(info.name)) return;
+            MeshDict.Add(info, mesh);
+        }
+
+        public static void CleanDupedMeshes()
+        {
+            foreach (Mesh dupedMesh in dupedMesh)
+            {
+                GameObject.Destroy(dupedMesh);
+                Resources.UnloadAsset(dupedMesh);
+            }
+
+            dupedMesh = [];
         }
 
         public static void GenerateLODs(GameObject gameObject, Transform root = null)
@@ -158,15 +259,19 @@ namespace Scoops.service
                         else
                         {
                             newMesh = DecimateMesh(sourceMesh, quality);
+                            newMesh.name = sourceMesh.name + "_decimated";
                             newMesh.UploadMeshData(true);
                         }
 
                         decimatedMeshDict[sourceId] = newMesh;
                         decimatedMeshes.Add(newMesh.GetInstanceID());
+                        dupedMesh.Add(meshFilter.sharedMesh);
                         meshFilter.sharedMesh = newMesh;
                     }
                 }
             }
+
+            CleanDupedMeshes();
         }
 
         public static Mesh DecimateMeshLossless(Mesh sourceMesh)
