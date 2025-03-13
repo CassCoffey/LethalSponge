@@ -77,6 +77,8 @@ namespace Scoops.service
 
         public static LayerMask LODlayers = LayerMask.GetMask("Props", "Default", "Enemies");
 
+        public static string[] deDupeBlacklist;
+
         private static SimplificationOptions simplificationOptions = SimplificationOptions.Default;
         private static LODLevel[] levels = null;
 
@@ -100,42 +102,73 @@ namespace Scoops.service
                 UVComponentCount = 2
             };
 
-            levels = new LODLevel[]
+            if (Config.useLOD2.Value)
             {
-                new LODLevel(Config.LOD1Start.Value, 1f)
+                levels = new LODLevel[]
                 {
-                    CombineMeshes = false,
-                    CombineSubMeshes = false,
-                    SkinQuality = SkinQuality.Auto,
-                    ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On,
-                    ReceiveShadows = true,
-                    SkinnedMotionVectors = true,
-                    LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
-                    ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.BlendProbes,
-                },
-                new LODLevel(Config.LOD2Start.Value, Config.LOD1Quality.Value)
+                    new LODLevel(Config.LOD1Start.Value, 1f)
+                    {
+                        CombineMeshes = false,
+                        CombineSubMeshes = false,
+                        SkinQuality = SkinQuality.Auto,
+                        ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On,
+                        ReceiveShadows = true,
+                        SkinnedMotionVectors = true,
+                        LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
+                        ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.BlendProbes,
+                    },
+                    new LODLevel(Config.LOD2Start.Value, Config.LOD1Quality.Value)
+                    {
+                        CombineMeshes = true,
+                        CombineSubMeshes = false,
+                        SkinQuality = SkinQuality.Auto,
+                        ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On,
+                        ReceiveShadows = true,
+                        SkinnedMotionVectors = true,
+                        LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
+                        ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Simple,
+                    },
+                    new LODLevel(Config.cullStart.Value, Config.LOD2Quality.Value)
+                    {
+                        CombineMeshes = true,
+                        CombineSubMeshes = true,
+                        SkinQuality = SkinQuality.Bone2,
+                        ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off,
+                        ReceiveShadows = false,
+                        SkinnedMotionVectors = false,
+                        LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off,
+                        ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off,
+                    }
+                };
+            }
+            else
+            {
+                levels = new LODLevel[]
                 {
-                    CombineMeshes = true,
-                    CombineSubMeshes = false,
-                    SkinQuality = SkinQuality.Auto,
-                    ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On,
-                    ReceiveShadows = true,
-                    SkinnedMotionVectors = true,
-                    LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
-                    ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Simple,
-                },
-                new LODLevel(Config.cullStart.Value, Config.LOD2Quality.Value)
-                {
-                    CombineMeshes = true,
-                    CombineSubMeshes = true,
-                    SkinQuality = SkinQuality.Bone2,
-                    ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off,
-                    ReceiveShadows = false,
-                    SkinnedMotionVectors = false,
-                    LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off,
-                    ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off,
-                }
-            };
+                    new LODLevel(Config.LOD1Start.Value, 1f)
+                    {
+                        CombineMeshes = false,
+                        CombineSubMeshes = false,
+                        SkinQuality = SkinQuality.Auto,
+                        ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On,
+                        ReceiveShadows = true,
+                        SkinnedMotionVectors = true,
+                        LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
+                        ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.BlendProbes,
+                    },
+                    new LODLevel(Config.cullStart.Value, Config.LOD1Quality.Value)
+                    {
+                        CombineMeshes = true,
+                        CombineSubMeshes = false,
+                        SkinQuality = SkinQuality.Auto,
+                        ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On,
+                        ReceiveShadows = true,
+                        SkinnedMotionVectors = true,
+                        LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
+                        ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Simple,
+                    }
+                };
+            }
 
             meshSimplifier = new MeshSimplifier();
             meshSimplifier.SimplificationOptions = simplificationOptions;
@@ -151,18 +184,69 @@ namespace Scoops.service
                 if (meshFilter != null && meshFilter.sharedMesh != null)
                 {
                     MeshInfo meshInfo = new MeshInfo(meshFilter.sharedMesh.name, meshFilter.sharedMesh.vertexCount);
-                    if (MeshDict.TryGetValue(meshInfo, out Mesh processedMesh) && processedMesh.GetInstanceID() == meshFilter.sharedMesh.GetInstanceID())
+                    if (MeshDict.TryGetValue(meshInfo, out Mesh processedMesh))
                     {
-                        // Already processed
-                    }
-                    else if (MeshDict.TryGetValue(meshInfo, out Mesh dedupedMesh))
-                    {
-                        dupedMesh.Add(meshFilter.sharedMesh);
-                        meshFilter.sharedMesh = dedupedMesh;
+                        if (processedMesh.GetInstanceID() == meshFilter.sharedMesh.GetInstanceID())
+                        {
+                            // Already processed
+                        }
+                        else
+                        {
+                            dupedMesh.Add(meshFilter.sharedMesh);
+                            meshFilter.sharedMesh = processedMesh;
+                        }
                     }
                     else
                     {
                         AddToMeshDict(meshInfo, meshFilter.sharedMesh);
+                    }
+                }
+            }
+
+            // Skinned meshes cause too many problems at the moment
+            //SkinnedMeshRenderer[] allSkinnedMeshRenderers = Resources.FindObjectsOfTypeAll<SkinnedMeshRenderer>();
+            //foreach (SkinnedMeshRenderer skinnedMeshRenderer in allSkinnedMeshRenderers)
+            //{
+            //    if (skinnedMeshRenderer != null && skinnedMeshRenderer.sharedMesh != null)
+            //    {
+            //        MeshInfo meshInfo = new MeshInfo(skinnedMeshRenderer.sharedMesh.name, skinnedMeshRenderer.sharedMesh.vertexCount);
+            //        if (MeshDict.TryGetValue(meshInfo, out Mesh processedMesh) && processedMesh.GetInstanceID() == skinnedMeshRenderer.sharedMesh.GetInstanceID())
+            //        {
+            //            // Already processed
+            //        }
+            //        else if (MeshDict.TryGetValue(meshInfo, out Mesh dedupedMesh))
+            //        {
+            //            dupedMesh.Add(skinnedMeshRenderer.sharedMesh);
+            //            skinnedMeshRenderer.sharedMesh = dedupedMesh;
+            //        }
+            //        else
+            //        {
+            //            AddToMeshDict(meshInfo, skinnedMeshRenderer.sharedMesh);
+            //        }
+            //    }
+            //}
+
+            MeshCollider[] allMeshColliders = Resources.FindObjectsOfTypeAll<MeshCollider>();
+            foreach (MeshCollider meshCollider in allMeshColliders)
+            {
+                if (meshCollider != null && meshCollider.sharedMesh != null)
+                {
+                    MeshInfo meshInfo = new MeshInfo(meshCollider.sharedMesh.name, meshCollider.sharedMesh.vertexCount);
+                    if (MeshDict.TryGetValue(meshInfo, out Mesh processedMesh))
+                    {
+                        if (processedMesh.GetInstanceID() == meshCollider.sharedMesh.GetInstanceID())
+                        {
+                            // Already processed
+                        }
+                        else
+                        {
+                            dupedMesh.Add(meshCollider.sharedMesh);
+                            meshCollider.sharedMesh = processedMesh;
+                        }
+                    }
+                    else
+                    {
+                        AddToMeshDict(meshInfo, meshCollider.sharedMesh);
                     }
                 }
             }
@@ -172,7 +256,7 @@ namespace Scoops.service
 
         public static void AddToMeshDict(MeshInfo info, Mesh mesh)
         {
-            if (info.name == "" || Config.deDupeTextureBlacklist.Value.ToLower().Trim().Split(';').Contains(info.name)) return;
+            if (info.name == "" || deDupeBlacklist.Contains(info.name)) return;
             MeshDict.Add(info, mesh);
         }
 
@@ -194,13 +278,9 @@ namespace Scoops.service
             if (gameObject.transform.Find(LODGenerator.LODParentGameObjectName) != null) return;
             if (root != null && root.Find(LODGenerator.LODParentGameObjectName) != null) return;
 
+            // Ignore objects that already have LODs
             LODGroup[] existingLODs = gameObject.GetComponentsInChildren<LODGroup>();
-
-            // Remove existing LODs
-            foreach (LODGroup existingLOD in existingLODs)
-            {
-                GameObject.Destroy(existingLOD);
-            }
+            if (existingLODs.Length > 0) return;
 
             try
             {
@@ -240,15 +320,16 @@ namespace Scoops.service
                         float quality = 1f;
 
                         Renderer renderer = meshFilter.gameObject.GetComponent<Renderer>();
-                        if (renderer != null && sourceMesh.vertexCount > 1000)
+                        float vertCutoff = Config.complexMeshVertCutoff.Value;
+                        if (renderer != null && sourceMesh.vertexCount > vertCutoff)
                         {
                             float largestDimension = Mathf.Max(renderer.bounds.size.x, Mathf.Max(renderer.bounds.size.y, renderer.bounds.size.z));
                             float cubedMeters = largestDimension * largestDimension * largestDimension;
                             float vertPerMeter = (float)sourceMesh.vertexCount / cubedMeters;
 
-                            if (vertPerMeter >= 5000f)
+                            if (vertPerMeter >= vertCutoff)
                             {
-                                quality = Mathf.Clamp(5000f / vertPerMeter, 0.2f, 1f);
+                                quality = Mathf.Clamp(vertCutoff / vertPerMeter, 0.2f, 1f);
                             }
                         }
                         
@@ -259,7 +340,7 @@ namespace Scoops.service
                         else
                         {
                             newMesh = DecimateMesh(sourceMesh, quality);
-                            newMesh.name = sourceMesh.name + "_decimated";
+                            newMesh.name = sourceMesh.name;
                             newMesh.UploadMeshData(true);
                         }
 

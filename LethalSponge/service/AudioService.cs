@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -12,6 +13,8 @@ namespace Scoops.service
         public static Dictionary<string, AudioClip> AudioDict = new Dictionary<string, AudioClip>();
         public static List<AudioClip> dupedAudio = new List<AudioClip>();
 
+        public static string[] deDupeBlacklist;
+
         public static void DedupeAllAudio()
         {
             // Here we go through every possible location an audio clip can be saved in base lethal company
@@ -21,239 +24,238 @@ namespace Scoops.service
             {
                 if (audioSource != null)
                 {
-                    DedupeAudio(audioSource.clip);
+                    audioSource.clip = DedupeAudio(audioSource.clip);
                 }
             }
-
+            
             AnimatedObjectTrigger[] allAnimatedObjectTriggers = Resources.FindObjectsOfTypeAll<AnimatedObjectTrigger>();
             foreach (AnimatedObjectTrigger animatedObjectTrigger in allAnimatedObjectTriggers)
             {
                 if (animatedObjectTrigger != null)
                 {
-                    foreach (AudioClip clip in animatedObjectTrigger.boolTrueAudios)
+                    for (int i = 0; i < animatedObjectTrigger.boolTrueAudios.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        animatedObjectTrigger.boolTrueAudios[i] = DedupeAudio(animatedObjectTrigger.boolTrueAudios[i]);
                     }
-                    foreach (AudioClip clip in animatedObjectTrigger.boolFalseAudios)
+                    for (int i = 0; i < animatedObjectTrigger.boolFalseAudios.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        animatedObjectTrigger.boolFalseAudios[i] = DedupeAudio(animatedObjectTrigger.boolFalseAudios[i]);
                     }
-                    foreach (AudioClip clip in animatedObjectTrigger.secondaryAudios)
+                    for (int i = 0; i < animatedObjectTrigger.secondaryAudios.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        animatedObjectTrigger.secondaryAudios[i] = DedupeAudio(animatedObjectTrigger.secondaryAudios[i]);
                     }
                 }
             }
-
+            
             EntranceTeleport[] allEntranceTeleports = Resources.FindObjectsOfTypeAll<EntranceTeleport>();
             foreach (EntranceTeleport entranceTeleport in allEntranceTeleports)
             {
                 if (entranceTeleport != null)
                 {
-                    foreach (AudioClip clip in entranceTeleport.doorAudios)
+                    for (int i = 0; i < entranceTeleport.doorAudios.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        entranceTeleport.doorAudios[i] = DedupeAudio(entranceTeleport.doorAudios[i]);
                     }
                 }
             }
-
+            
             DoorLock[] allDoorLocks = Resources.FindObjectsOfTypeAll<DoorLock>();
             foreach (DoorLock doorLock in allDoorLocks)
             {
                 if (doorLock != null)
                 {
-                    DedupeAudio(doorLock.pickingLockSFX);
-                    DedupeAudio(doorLock.unlockSFX);
+                    doorLock.pickingLockSFX = DedupeAudio(doorLock.pickingLockSFX);
+                    doorLock.unlockSFX = DedupeAudio(doorLock.unlockSFX);
                 }
             }
-
+            
             PlayAudioAnimationEvent[] allPlayAudioAnimationEvents = Resources.FindObjectsOfTypeAll<PlayAudioAnimationEvent>();
             foreach (PlayAudioAnimationEvent playAudioAnimationEvent in allPlayAudioAnimationEvents)
             {
                 if (playAudioAnimationEvent != null)
                 {
-                    DedupeAudio(playAudioAnimationEvent.audioClip);
-                    DedupeAudio(playAudioAnimationEvent.audioClip2);
-                    DedupeAudio(playAudioAnimationEvent.audioClip3);
-                    foreach (AudioClip clip in playAudioAnimationEvent.randomClips)
+                    playAudioAnimationEvent.audioClip = DedupeAudio(playAudioAnimationEvent.audioClip);
+                    playAudioAnimationEvent.audioClip2 = DedupeAudio(playAudioAnimationEvent.audioClip2);
+                    playAudioAnimationEvent.audioClip3 = DedupeAudio(playAudioAnimationEvent.audioClip3);
+                    for (int i = 0; i < playAudioAnimationEvent.randomClips.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        playAudioAnimationEvent.randomClips[i] = DedupeAudio(playAudioAnimationEvent.randomClips[i]);
                     }
-                    foreach (AudioClip clip in playAudioAnimationEvent.randomClips2)
+                    for (int i = 0; i < playAudioAnimationEvent.randomClips2.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        playAudioAnimationEvent.randomClips2[i] = DedupeAudio(playAudioAnimationEvent.randomClips2[i]);
                     }
                 }
             }
-
+            
             EnemyVent[] allEnemyVents = Resources.FindObjectsOfTypeAll<EnemyVent>();
             foreach (EnemyVent enemyVent in allEnemyVents)
             {
                 if (enemyVent != null)
                 {
-                    DedupeAudio(enemyVent.ventCrawlSFX);
+                    enemyVent.ventCrawlSFX = DedupeAudio(enemyVent.ventCrawlSFX);
                 }
             }
-
+            
             LungProp[] allLungProps = Resources.FindObjectsOfTypeAll<LungProp>();
             foreach (LungProp lungProp in allLungProps)
             {
                 if (lungProp != null)
                 {
-                    DedupeAudio(lungProp.connectSFX);
-                    DedupeAudio(lungProp.disconnectSFX);
-                    DedupeAudio(lungProp.removeFromMachineSFX);
+                    lungProp.connectSFX = DedupeAudio(lungProp.connectSFX);
+                    lungProp.disconnectSFX = DedupeAudio(lungProp.disconnectSFX);
+                    lungProp.removeFromMachineSFX = DedupeAudio(lungProp.removeFromMachineSFX);
                 }
             }
-
+            
             Item[] allItems = Resources.FindObjectsOfTypeAll<Item>();
             foreach (Item item in allItems)
             {
                 if (item != null)
                 {
-                    DedupeAudio(item.grabSFX);
-                    DedupeAudio(item.dropSFX);
-                    DedupeAudio(item.pocketSFX);
-                    DedupeAudio(item.throwSFX);
+                    item.grabSFX = DedupeAudio(item.grabSFX);
+                    item.dropSFX = DedupeAudio(item.dropSFX);
+                    item.pocketSFX = DedupeAudio(item.pocketSFX);
+                    item.throwSFX = DedupeAudio(item.throwSFX);
                 }
             }
-
+            
             LevelAmbienceLibrary[] allLevelAmbienceLibraries = Resources.FindObjectsOfTypeAll<LevelAmbienceLibrary>();
             foreach (LevelAmbienceLibrary levelAmbienceLibrary in allLevelAmbienceLibraries)
             {
                 if (levelAmbienceLibrary != null)
                 {
-                    foreach (AudioClip clip in levelAmbienceLibrary.insanityMusicAudios)
+                    for (int i = 0; i < levelAmbienceLibrary.insanityMusicAudios.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        levelAmbienceLibrary.insanityMusicAudios[i] = DedupeAudio(levelAmbienceLibrary.insanityMusicAudios[i]);
                     }
-                    foreach (AudioClip clip in levelAmbienceLibrary.insideAmbience)
+                    for (int i = 0; i < levelAmbienceLibrary.insideAmbience.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        levelAmbienceLibrary.insideAmbience[i] = DedupeAudio(levelAmbienceLibrary.insideAmbience[i]);
                     }
-                    foreach (AudioClip clip in levelAmbienceLibrary.shipAmbience)
+                    for (int i = 0; i < levelAmbienceLibrary.shipAmbience.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        levelAmbienceLibrary.shipAmbience[i] = DedupeAudio(levelAmbienceLibrary.shipAmbience[i]);
                     }
-                    foreach (AudioClip clip in levelAmbienceLibrary.outsideAmbience)
+                    for (int i = 0; i < levelAmbienceLibrary.outsideAmbience.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        levelAmbienceLibrary.outsideAmbience[i] = DedupeAudio(levelAmbienceLibrary.outsideAmbience[i]);
                     }
-                    foreach (RandomAudioClip randomClip in levelAmbienceLibrary.insideAmbienceInsanity)
+                    for (int i = 0; i < levelAmbienceLibrary.insideAmbienceInsanity.Length; i++)
                     {
-                        DedupeAudio(randomClip.audioClip);
+                        levelAmbienceLibrary.insideAmbienceInsanity[i].audioClip = DedupeAudio(levelAmbienceLibrary.insideAmbienceInsanity[i].audioClip);
                     }
-                    foreach (RandomAudioClip randomClip in levelAmbienceLibrary.shipAmbienceInsanity)
+                    for (int i = 0; i < levelAmbienceLibrary.shipAmbienceInsanity.Length; i++)
                     {
-                        DedupeAudio(randomClip.audioClip);
+                        levelAmbienceLibrary.shipAmbienceInsanity[i].audioClip = DedupeAudio(levelAmbienceLibrary.shipAmbienceInsanity[i].audioClip);
                     }
-                    foreach (RandomAudioClip randomClip in levelAmbienceLibrary.outsideAmbienceInsanity)
+                    for (int i = 0; i < levelAmbienceLibrary.outsideAmbienceInsanity.Length; i++)
                     {
-                        DedupeAudio(randomClip.audioClip);
+                        levelAmbienceLibrary.outsideAmbienceInsanity[i].audioClip = DedupeAudio(levelAmbienceLibrary.outsideAmbienceInsanity[i].audioClip);
                     }
                 }
             }
-
+            
             RadMechAI[] allRadMechAIs = Resources.FindObjectsOfTypeAll<RadMechAI>();
             foreach (RadMechAI radMechAI in allRadMechAIs)
             {
                 if (radMechAI != null)
                 {
-                    DedupeAudio(radMechAI.spotlightOff);
-                    DedupeAudio(radMechAI.spotlightFlicker);
-                    foreach (AudioClip clip in radMechAI.shootGunSFX)
+                    radMechAI.spotlightOff = DedupeAudio(radMechAI.spotlightOff);
+                    radMechAI.spotlightFlicker = DedupeAudio(radMechAI.spotlightFlicker);
+                    for (int i = 0; i < radMechAI.shootGunSFX.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        radMechAI.shootGunSFX[i] = DedupeAudio(radMechAI.shootGunSFX[i]);
                     }
-                    foreach (AudioClip clip in radMechAI.largeExplosionSFX)
+                    for (int i = 0; i < radMechAI.largeExplosionSFX.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        radMechAI.largeExplosionSFX[i] = DedupeAudio(radMechAI.largeExplosionSFX[i]);
                     }
-                    
                 }
             }
-
+            
             Shovel[] allShovels = Resources.FindObjectsOfTypeAll<Shovel>();
             foreach (Shovel shovel in allShovels)
             {
                 if (shovel != null)
                 {
-                    DedupeAudio(shovel.reelUp);
-                    DedupeAudio(shovel.swing);
-                    foreach (AudioClip clip in shovel.hitSFX)
+                    shovel.reelUp = DedupeAudio(shovel.reelUp);
+                    shovel.swing = DedupeAudio(shovel.swing);
+                    for (int i = 0; i < shovel.hitSFX.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        shovel.hitSFX[i] = DedupeAudio(shovel.hitSFX[i]);
                     }
                 }
             }
-
+            
             KnifeItem[] allKnifeItems = Resources.FindObjectsOfTypeAll<KnifeItem>();
             foreach (KnifeItem knifeItem in allKnifeItems)
             {
                 if (knifeItem != null)
                 {
-                    foreach (AudioClip clip in knifeItem.hitSFX)
+                    for (int i = 0; i < knifeItem.hitSFX.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        knifeItem.hitSFX[i] = DedupeAudio(knifeItem.hitSFX[i]);
                     }
-                    foreach (AudioClip clip in knifeItem.swingSFX)
+                    for (int i = 0; i < knifeItem.swingSFX.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        knifeItem.swingSFX[i] = DedupeAudio(knifeItem.swingSFX[i]);
                     }
                 }
             }
-
+            
             PlaceableShipObject[] allPlaceableShipObjects = Resources.FindObjectsOfTypeAll<PlaceableShipObject>();
             foreach (PlaceableShipObject placeableShipObject in allPlaceableShipObjects)
             {
                 if (placeableShipObject != null)
                 {
-                    DedupeAudio(placeableShipObject.placeObjectSFX);
+                    placeableShipObject.placeObjectSFX = DedupeAudio(placeableShipObject.placeObjectSFX);
                 }
             }
-
+            
             EnemyType[] allEnemyTypes = Resources.FindObjectsOfTypeAll<EnemyType>();
             foreach (EnemyType enemyType in allEnemyTypes)
             {
                 if (enemyType != null)
                 {
-                    DedupeAudio(enemyType.overrideVentSFX);
-                    DedupeAudio(enemyType.hitBodySFX);
-                    DedupeAudio(enemyType.hitEnemyVoiceSFX);
-                    DedupeAudio(enemyType.stunSFX);
-                    foreach (AudioClip clip in enemyType.audioClips)
+                    enemyType.overrideVentSFX = DedupeAudio(enemyType.overrideVentSFX);
+                    enemyType.hitBodySFX = DedupeAudio(enemyType.hitBodySFX);
+                    enemyType.hitEnemyVoiceSFX = DedupeAudio(enemyType.hitEnemyVoiceSFX);
+                    enemyType.stunSFX = DedupeAudio(enemyType.stunSFX);
+                    for (int i = 0; i < enemyType.audioClips.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        enemyType.audioClips[i] = DedupeAudio(enemyType.audioClips[i]);
                     }
                 }
             }
-
+            
             FlashlightItem[] allFlashlightItems = Resources.FindObjectsOfTypeAll<FlashlightItem>();
             foreach (FlashlightItem flashlightItem in allFlashlightItems)
             {
                 if (flashlightItem != null)
                 {
-                    DedupeAudio(flashlightItem.outOfBatteriesClip);
-                    DedupeAudio(flashlightItem.flashlightFlicker);
-                    foreach (AudioClip clip in flashlightItem.flashlightClips)
+                    flashlightItem.outOfBatteriesClip = DedupeAudio(flashlightItem.outOfBatteriesClip);
+                    flashlightItem.flashlightFlicker = DedupeAudio(flashlightItem.flashlightFlicker);
+                    for (int i = 0; i < flashlightItem.flashlightClips.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        flashlightItem.flashlightClips[i] = DedupeAudio(flashlightItem.flashlightClips[i]);
                     }
                 }
             }
-
+            
             NoisemakerProp[] allNoisemakerProps = Resources.FindObjectsOfTypeAll<NoisemakerProp>();
             foreach (NoisemakerProp noisemakerProp in allNoisemakerProps)
             {
                 if (noisemakerProp != null)
                 {
-                    foreach (AudioClip clip in noisemakerProp.noiseSFX)
+                    for (int i = 0; i < noisemakerProp.noiseSFX.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        noisemakerProp.noiseSFX[i] = DedupeAudio(noisemakerProp.noiseSFX[i]);
                     }
-                    foreach (AudioClip clip in noisemakerProp.noiseSFXFar)
+                    for (int i = 0; i < noisemakerProp.noiseSFXFar.Length; i++)
                     {
-                        DedupeAudio(clip);
+                        noisemakerProp.noiseSFXFar[i] = DedupeAudio(noisemakerProp.noiseSFXFar[i]);
                     }
                 }
             }
@@ -267,28 +269,33 @@ namespace Scoops.service
             dupedAudio = [];
         }
 
-        public static void DedupeAudio(AudioClip clip)
+        public static AudioClip DedupeAudio(AudioClip clip)
         {
-            if (clip == null) return;
+            if (clip == null) return null;
 
-            if (AudioDict.TryGetValue(clip.name, out AudioClip processedAudio) && processedAudio.GetInstanceID() == clip.GetInstanceID())
+            if (AudioDict.TryGetValue(clip.name, out AudioClip processedAudio))
             {
-                // Already processed
-            }
-            else if (AudioDict.TryGetValue(clip.name, out AudioClip dedupedAudio))
-            {
-                dupedAudio.Add(clip);
-                clip = dedupedAudio;
+                if (processedAudio.GetInstanceID() == clip.GetInstanceID())
+                {
+                    // Already processed
+                    return clip;
+                }
+                else
+                {
+                    dupedAudio.Add(clip);
+                    return processedAudio;
+                }
             }
             else
             {
                 AddToAudioDict(clip.name, clip);
+                return clip;
             }
         }
 
         public static void AddToAudioDict(string name, AudioClip audio)
         {
-            if (name == "" || Config.deDupeTextureBlacklist.Value.ToLower().Trim().Split(';').Contains(name)) return;
+            if (name == "" || deDupeBlacklist.Contains(name)) return;
             AudioDict.Add(name, audio);
         }
     }

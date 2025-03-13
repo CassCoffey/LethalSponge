@@ -18,18 +18,27 @@ namespace Scoops
         public static ConfigEntry<bool> fixInputActions;
 
         public static ConfigEntry<bool> generateLODs;
+        public static ConfigEntry<bool> useLOD2;
         public static ConfigEntry<float> LOD1Start;
         public static ConfigEntry<float> LOD2Start;
         public static ConfigEntry<float> LOD1Quality;
         public static ConfigEntry<float> LOD2Quality;
         public static ConfigEntry<float> cullStart;
         public static ConfigEntry<bool> fixComplexMeshes;
+        public static ConfigEntry<float> complexMeshVertCutoff;
         public static ConfigEntry<bool> preserveSurfaceCurvature;
 
-        public static ConfigEntry<bool> deDupeTextures;
-        public static ConfigEntry<string> deDupeTextureBlacklist;
         public static ConfigEntry<bool> resizeTextures;
         public static ConfigEntry<int> maxTextureSize;
+
+        public static ConfigEntry<bool> deDupeMeshes;
+        public static ConfigEntry<string> deDupeMeshBlacklist;
+        public static ConfigEntry<bool> deDupeTextures;
+        public static ConfigEntry<string> deDupeTextureBlacklist;
+        public static ConfigEntry<bool> deDupeAudio;
+        public static ConfigEntry<string> deDupeAudioBlacklist;
+        public static ConfigEntry<bool> deDupeShaders;
+        public static ConfigEntry<string> deDupeShaderBlacklist;
 
         public static ConfigEntry<bool> fixCameraSettings;
         public static ConfigEntry<bool> applyShipCameraQualityOverrides;
@@ -148,6 +157,12 @@ namespace Scoops
                     true,
                     "Should Sponge automatically generate LODs for meshes? (Will increase load times and memory usage slightly)"
             );
+            useLOD2 = cfg.Bind(
+                    "Meshes",
+                    "useLOD2",
+                    false,
+                    "Should Sponge generate a second LOD level so meshes go from Full Detail -> LOD1 -> LOD2 -> Culled? (Will increase load times and memory usage more)"
+            );
             LOD1Start = cfg.Bind(
                     "Meshes",
                     "LOD1Start",
@@ -157,32 +172,38 @@ namespace Scoops
             LOD1Quality = cfg.Bind(
                     "Meshes",
                     "LOD1Quality",
-                    0.5f,
+                    0.65f,
                     new ConfigDescription("What quality level the first LOD be? (requires generateLODs = true)", new AcceptableValueRange<float>(0f, 1f))
             );
             LOD2Start = cfg.Bind(
                     "Meshes",
                     "LOD2Start",
                     0.08f,
-                    new ConfigDescription("Where should the second LOD start? (Measured in mesh size on screen) (requires generateLODs = true)", new AcceptableValueRange<float>(0f, 1f))
+                    new ConfigDescription("Where should the second LOD start? (Measured in mesh size on screen) (requires generateLODs = true and useLOD2 = true)", new AcceptableValueRange<float>(0f, 1f))
             );
             LOD2Quality = cfg.Bind(
                     "Meshes",
                     "LOD2Quality",
                     0.15f,
-                    new ConfigDescription("What quality level the second LOD be? (requires generateLODs = true)", new AcceptableValueRange<float>(0f, 1f))
+                    new ConfigDescription("What quality level the second LOD be? (requires generateLODs = true and useLOD2 = true)", new AcceptableValueRange<float>(0f, 1f))
             );
             cullStart = cfg.Bind(
                     "Meshes",
                     "cullStart",
                     0.02f,
-                    "Where should the last/cull LOD start? (Measured in mesh size on screen) (requires generateLODs = true)"
+                    new ConfigDescription("Where should the last/cull LOD start? (Measured in mesh size on screen) (requires generateLODs = true)", new AcceptableValueRange<float>(0f, 1f))
             );
             fixComplexMeshes = cfg.Bind(
                     "Meshes",
                     "fixComplexMeshes",
                     true,
                     "Should Sponge reduce vertex counts of overly complex meshes? (Will increase load times and memory usage slightly)"
+            );
+            complexMeshVertCutoff = cfg.Bind(
+                    "Meshes",
+                    "complexMeshVertCutoff",
+                    5000f,
+                    "What is the minimum Vertex Density (Vertices over Meters Cubed) that meshes should be considered 'too complex'. This also determines the minimum Vertices for the cutoff."
             );
             preserveSurfaceCurvature = cfg.Bind(
                     "Meshes",
@@ -192,29 +213,68 @@ namespace Scoops
             );
 
             // Textures
-            deDupeTextures = cfg.Bind(
-                    "Textures",
-                    "deDupeTextures",
-                    true,
-                    "Should Sponge automatically remove duplicate textures? (Will increase load times)"
-            );
-            deDupeTextureBlacklist = cfg.Bind(
-                    "Textures",
-                    "deDupeTextureBlacklist",
-                    "playersuittex2b",
-                    "Texture names in this semicolon-separated list will be exempt from de-duping."
-            );
             resizeTextures = cfg.Bind(
                     "Textures",
                     "resizeTextures",
                     true,
-                    "Should Sponge automatically resize textures to fit the maxTextureSize? (Will increase load times)"
+                    "Should Sponge automatically resize textures to fit the maxTextureSize? (Will slightly increase load times and decrease VRAM usage)"
             );
             maxTextureSize = cfg.Bind(
                     "Textures",
                     "maxTextureSize",
                     1024,
                     "All textures with height over this number will be resized down to this number."
+            );
+
+            // Dedupe
+            deDupeMeshes = cfg.Bind(
+                    "Dedupe",
+                    "deDupeMeshes",
+                    true,
+                    "Should Sponge automatically remove duplicate meshes? (Will increase load times and decrease RAM/VRAM usage)"
+            );
+            deDupeMeshBlacklist = cfg.Bind(
+                    "Dedupe",
+                    "deDupeMeshBlacklist",
+                    // sigh
+                    "cube;sphere;circle;cylinder",
+                    "Mesh names in this semicolon-separated list will be exempt from de-duping."
+            );
+            deDupeTextures = cfg.Bind(
+                    "Dedupe",
+                    "deDupeTextures",
+                    true,
+                    "Should Sponge automatically remove duplicate textures? (Will increase load times and decrease VRAM usage)"
+            );
+            deDupeTextureBlacklist = cfg.Bind(
+                    "Dedupe",
+                    "deDupeTextureBlacklist",
+                    "playersuittex2b",
+                    "Texture names in this semicolon-separated list will be exempt from de-duping."
+            );
+            deDupeAudio = cfg.Bind(
+                    "Dedupe",
+                    "deDupeAudio",
+                    true,
+                    "Should Sponge automatically remove duplicate audio clips? (Will increase load times and decrease RAM usage)"
+            );
+            deDupeAudioBlacklist = cfg.Bind(
+                    "Dedupe",
+                    "deDupeAudioBlacklist",
+                    "",
+                    "Audio clip names in this semicolon-separated list will be exempt from de-duping."
+            );
+            deDupeShaders = cfg.Bind(
+                    "Dedupe",
+                    "deDupeShaders",
+                    true,
+                    "Should Sponge automatically remove duplicate shaders? (Will increase load times and decrease RAM usage)"
+            );
+            deDupeShaderBlacklist = cfg.Bind(
+                    "Dedupe",
+                    "deDupeShaderBlacklist",
+                    "",
+                    "Shader names in this semicolon-separated list will be exempt from de-duping."
             );
 
             // Cameras
@@ -453,7 +513,7 @@ namespace Scoops
             lightVolumetricDistCap = cfg.Bind(
                 "Graphics Quality",
                 "lightVolumetricDistCap",
-                150f,
+                250f,
                 new ConfigDescription("What should the maximum Fade Distance be for lights? (LC Defaults tend to use 10000 for Fade Distance)", new AcceptableValueRange<float>(25f, 1000f))
             );
 

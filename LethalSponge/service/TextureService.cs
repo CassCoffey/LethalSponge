@@ -12,6 +12,8 @@ namespace Scoops.service
         public static Dictionary<string, Texture2D> TextureDict = new Dictionary<string, Texture2D>();
         public static List<Texture2D> dupedTextures = new List<Texture2D>();
 
+        public static string[] deDupeBlacklist;
+
         public static void ResizeAllTextures()
         {
             Material[] allMaterials = Resources.FindObjectsOfTypeAll<Material>();
@@ -31,16 +33,19 @@ namespace Scoops.service
                                 {
                                     try
                                     {
-                                        if (TextureDict.TryGetValue(texture.name, out Texture2D processedTex) && processedTex.GetInstanceID() == texture.GetInstanceID())
+                                        if (TextureDict.TryGetValue(texture.name, out Texture2D processedTex))
                                         {
-                                            // Already processed
+                                            if (processedTex.GetInstanceID() == texture.GetInstanceID())
+                                            {
+                                                // Already processed
+                                            }
+                                            else
+                                            {
+                                                material.SetTexture(materialShader.GetPropertyName(i), processedTex);
+                                                dupedTextures.Add((Texture2D)texture);
+                                            }
                                         }
-                                        else if (TextureDict.TryGetValue(texture.name, out Texture2D dedupedTex))
-                                        {
-                                            material.SetTexture(materialShader.GetPropertyName(i), dedupedTex);
-                                            dupedTextures.Add((Texture2D)texture);
-                                        }
-                                        else if (texture.height > Config.maxTextureSize.Value || texture.width > Config.maxTextureSize.Value)
+                                        else if (Config.resizeTextures.Value && (texture.height > Config.maxTextureSize.Value || texture.width > Config.maxTextureSize.Value))
                                         {
                                             Texture2D resizedTex = GetResizedTexture((Texture2D)texture);
                                             material.SetTexture(materialShader.GetPropertyName(i), resizedTex);
@@ -75,7 +80,7 @@ namespace Scoops.service
 
         public static void AddToTextureDict(string name, Texture2D tex)
         {
-            if (name == "" || Config.deDupeTextureBlacklist.Value.ToLower().Trim().Split(';').Contains(name)) return;
+            if (name == "" || deDupeBlacklist.Contains(name)) return;
             TextureDict.Add(name, tex);
         }
 
@@ -96,7 +101,7 @@ namespace Scoops.service
 
             RenderTexture.active = rt;
             Texture2D result = new Texture2D(width, height, format, TextureCreationFlags.None);
-            result.name = texture.name + "_resized";
+            result.name = texture.name;
             result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
             result.Apply(false, true);
             RenderTexture.ReleaseTemporary(rt);

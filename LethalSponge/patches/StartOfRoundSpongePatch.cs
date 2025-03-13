@@ -40,10 +40,7 @@ namespace Scoops.patches
                 CameraService.DisablePosterization();
             }
 
-            //if (Config.resizeTextures.Value)
-            //{
-            //    TextureService.ResizeAllTextures();
-            //}
+            Plugin.ManageDeDuping();
         }
 
         [HarmonyPatch("PassTimeToNextDay")]
@@ -122,18 +119,6 @@ namespace Scoops.patches
                 {
                     __instance.AddChatMessage("Toggling Sponge custom shader.");
                     CameraService.TogglePasses();
-                    return false;
-                }
-            }
-
-            if (chatMessage.ToLower() == "/sponge resize")
-            {
-                if (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value)
-                {
-                    TextureService.ResizeAllTextures();
-                    AudioService.DedupeAllAudio();
-                    ShaderService.DedupeAllShaders();
-                    MeshService.DedupeAllMeshes();
                     return false;
                 }
             }

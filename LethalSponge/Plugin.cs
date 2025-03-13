@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Rendering;
 using System;
+using UnityEngine.SceneManagement;
 
 namespace Scoops;
 
@@ -76,6 +77,8 @@ public class Plugin : BaseUnityPlugin
         {
             MeshService.Init();
         }
+
+        SceneManager.sceneLoaded += SceneLoad;
     }
 
     public IEnumerator RegisterAssetBundlesStale()
@@ -155,6 +158,50 @@ public class Plugin : BaseUnityPlugin
         _harmony.PatchAll(typeof(AssetBundleLoadAsyncSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleLoadMultipleSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleLoadMultipleAsyncSpongePatch));
+    }
+
+    public static void SceneLoad(Scene scene, LoadSceneMode mode)
+    {
+        //ManageDeDuping();
+    }
+
+    public static void ManageDeDuping()
+    {
+        bool deduped = false;
+
+        if (Scoops.Config.deDupeTextures.Value || Scoops.Config.resizeTextures.Value)
+        {
+            TextureService.deDupeBlacklist = Scoops.Config.deDupeTextureBlacklist.Value.ToLower().Trim().Split(';');
+            TextureService.ResizeAllTextures();
+            deduped = true;
+        }
+
+        if (Scoops.Config.deDupeShaders.Value)
+        {
+            ShaderService.deDupeBlacklist = Scoops.Config.deDupeShaderBlacklist.Value.ToLower().Trim().Split(';');
+            ShaderService.DedupeAllShaders();
+            deduped = true;
+        }
+
+        if (Scoops.Config.deDupeMeshes.Value)
+        {
+            MeshService.deDupeBlacklist = Scoops.Config.deDupeMeshBlacklist.Value.ToLower().Trim().Split(';');
+            MeshService.DedupeAllMeshes();
+            deduped = true;
+        }
+
+        if (Scoops.Config.deDupeAudio.Value)
+        {
+            AudioService.deDupeBlacklist = Scoops.Config.deDupeAudioBlacklist.Value.ToLower().Trim().Split(';');
+            AudioService.DedupeAllAudio();
+            deduped = true;
+        }
+
+        // Some final cleanup
+        if (deduped)
+        {
+            Resources.UnloadUnusedAssets();
+        }
     }
 
     private void AlterQualitySettings()

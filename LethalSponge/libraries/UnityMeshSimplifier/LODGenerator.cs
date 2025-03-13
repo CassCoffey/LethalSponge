@@ -485,6 +485,7 @@ namespace UnityMeshSimplifier
                 else
                 {
                     mesh = SimplifyMesh(mesh, level.Quality, simplificationOptions);
+                    mesh.name = mesh.name + "LOD" + levelIndex;
                     mesh.UploadMeshData(true);
                     MeshService.lodMeshDict.Add(meshInfo, mesh);
                 }
