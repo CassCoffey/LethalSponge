@@ -266,7 +266,8 @@ namespace Scoops.service
                 Resources.UnloadAsset(dupedAudio);
             }
 
-            dupedAudio = [];
+            dupedAudio.Clear();
+            AudioDict.Clear();
         }
 
         public static AudioClip DedupeAudio(AudioClip clip)
@@ -295,7 +296,7 @@ namespace Scoops.service
 
         public static void AddToAudioDict(string name, AudioClip audio)
         {
-            if (name == "" || deDupeBlacklist.Contains(name)) return;
+            if (name == "" || deDupeBlacklist.Contains(name.ToLower())) return;
             AudioDict.Add(name, audio);
         }
     }

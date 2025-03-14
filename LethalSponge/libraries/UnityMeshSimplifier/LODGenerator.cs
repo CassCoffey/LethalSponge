@@ -477,7 +477,8 @@ namespace UnityMeshSimplifier
             // Simplify the mesh if necessary
             if (level.Quality < 1f)
             {
-                MeshInfo meshInfo = new MeshInfo(mesh.name + "_" + level.Quality, mesh.vertexCount);
+                MeshInfo meshInfo = new MeshInfo(mesh);
+                meshInfo.name = mesh.name + "LOD" + levelIndex;
                 if (MeshService.lodMeshDict.TryGetValue(meshInfo, out Mesh generatedLOD))
                 {
                     mesh = generatedLOD;
@@ -609,6 +610,8 @@ namespace UnityMeshSimplifier
             var childRenderers = transform.GetComponents<Renderer>();
             // Skip SkinnedMeshRenderers until they're fixed
             childRenderers = childRenderers.Where(r => !(r is SkinnedMeshRenderer)).ToArray<Renderer>();
+            // Skip disabled Renderers
+            childRenderers = childRenderers.Where(r => r.enabled).ToArray<Renderer>();
             resultRenderers.AddRange(childRenderers);
 
             int childCount = transform.childCount;

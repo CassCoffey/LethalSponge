@@ -17,11 +17,13 @@ namespace Scoops.service
     {
         public string name;
         public int vertices;
+        public Vector3 boundsSize;
 
-        public MeshInfo(string name, int vertices)
+        public MeshInfo(Mesh mesh)
         {
-            this.name = name;
-            this.vertices = vertices;
+            this.name = mesh.name;
+            this.vertices = mesh.vertexCount;
+            this.boundsSize = mesh.bounds.size;
         }
 
         public override bool Equals(object obj) => this.Equals(obj as MeshInfo);
@@ -41,10 +43,10 @@ namespace Scoops.service
                 return false;
             }
 
-            return (name == m.name) && (vertices == m.vertices);
+            return (name == m.name) && (vertices == m.vertices) && (boundsSize == m.boundsSize);
         }
 
-        public override int GetHashCode() => (name, vertices).GetHashCode();
+        public override int GetHashCode() => (name, vertices, boundsSize).GetHashCode();
 
         public static bool operator ==(MeshInfo lhs, MeshInfo rhs)
         {
@@ -179,11 +181,19 @@ namespace Scoops.service
         public static void DedupeAllMeshes()
         {
             MeshFilter[] allMeshFilters = Resources.FindObjectsOfTypeAll<MeshFilter>();
+            Array.Sort(allMeshFilters, delegate (MeshFilter x, MeshFilter y) {
+                int id1 = x.sharedMesh ? x.sharedMesh.GetInstanceID() : 0;
+                uint id1ordered = id1 < 0 ? (uint)Math.Abs(id1) + (uint)int.MaxValue : (uint)id1;
+                int id2 = y.sharedMesh ? y.sharedMesh.GetInstanceID() : 0;
+                uint id2ordered = id2 < 0 ? (uint)Math.Abs(id2) + (uint)int.MaxValue : (uint)id2;
+                return (id1ordered).CompareTo(id2ordered);
+            });
+
             foreach (MeshFilter meshFilter in allMeshFilters)
             {
                 if (meshFilter != null && meshFilter.sharedMesh != null)
                 {
-                    MeshInfo meshInfo = new MeshInfo(meshFilter.sharedMesh.name, meshFilter.sharedMesh.vertexCount);
+                    MeshInfo meshInfo = new MeshInfo(meshFilter.sharedMesh);
                     if (MeshDict.TryGetValue(meshInfo, out Mesh processedMesh))
                     {
                         if (processedMesh.GetInstanceID() == meshFilter.sharedMesh.GetInstanceID())
@@ -227,11 +237,19 @@ namespace Scoops.service
             //}
 
             MeshCollider[] allMeshColliders = Resources.FindObjectsOfTypeAll<MeshCollider>();
+            Array.Sort(allMeshColliders, delegate (MeshCollider x, MeshCollider y) {
+                int id1 = x.sharedMesh ? x.sharedMesh.GetInstanceID() : 0;
+                uint id1ordered = id1 < 0 ? (uint)Math.Abs(id1) + (uint)int.MaxValue : (uint)id1;
+                int id2 = y.sharedMesh ? y.sharedMesh.GetInstanceID() : 0;
+                uint id2ordered = id2 < 0 ? (uint)Math.Abs(id2) + (uint)int.MaxValue : (uint)id2;
+                return (id1ordered).CompareTo(id2ordered);
+            });
+
             foreach (MeshCollider meshCollider in allMeshColliders)
             {
                 if (meshCollider != null && meshCollider.sharedMesh != null)
                 {
-                    MeshInfo meshInfo = new MeshInfo(meshCollider.sharedMesh.name, meshCollider.sharedMesh.vertexCount);
+                    MeshInfo meshInfo = new MeshInfo(meshCollider.sharedMesh);
                     if (MeshDict.TryGetValue(meshInfo, out Mesh processedMesh))
                     {
                         if (processedMesh.GetInstanceID() == meshCollider.sharedMesh.GetInstanceID())
@@ -252,11 +270,13 @@ namespace Scoops.service
             }
 
             CleanDupedMeshes();
+
+            MeshDict.Clear();
         }
 
         public static void AddToMeshDict(MeshInfo info, Mesh mesh)
         {
-            if (info.name == "" || deDupeBlacklist.Contains(info.name)) return;
+            if (info.name == "" || deDupeBlacklist.Contains(info.name.ToLower())) return;
             MeshDict.Add(info, mesh);
         }
 
@@ -268,7 +288,7 @@ namespace Scoops.service
                 Resources.UnloadAsset(dupedMesh);
             }
 
-            dupedMesh = [];
+            dupedMesh.Clear();
         }
 
         public static void GenerateLODs(GameObject gameObject, Transform root = null)

@@ -37,8 +37,8 @@ namespace Scoops
         public static ConfigEntry<string> deDupeTextureBlacklist;
         public static ConfigEntry<bool> deDupeAudio;
         public static ConfigEntry<string> deDupeAudioBlacklist;
-        public static ConfigEntry<bool> deDupeShaders;
-        public static ConfigEntry<string> deDupeShaderBlacklist;
+        //public static ConfigEntry<bool> deDupeShaders;
+        //public static ConfigEntry<string> deDupeShaderBlacklist;
 
         public static ConfigEntry<bool> fixCameraSettings;
         public static ConfigEntry<bool> applyShipCameraQualityOverrides;
@@ -264,18 +264,18 @@ namespace Scoops
                     "",
                     "Audio clip names in this semicolon-separated list will be exempt from de-duping."
             );
-            deDupeShaders = cfg.Bind(
-                    "Dedupe",
-                    "deDupeShaders",
-                    true,
-                    "Should Sponge automatically remove duplicate shaders? (Will increase load times and decrease RAM usage)"
-            );
-            deDupeShaderBlacklist = cfg.Bind(
-                    "Dedupe",
-                    "deDupeShaderBlacklist",
-                    "",
-                    "Shader names in this semicolon-separated list will be exempt from de-duping."
-            );
+            //deDupeShaders = cfg.Bind(
+            //        "Dedupe",
+            //        "deDupeShaders",
+            //        true,
+            //        "Should Sponge automatically remove duplicate shaders? (Will increase load times and decrease RAM usage)"
+            //);
+            //deDupeShaderBlacklist = cfg.Bind(
+            //        "Dedupe",
+            //        "deDupeShaderBlacklist",
+            //        "",
+            //        "Shader names in this semicolon-separated list will be exempt from de-duping."
+            //);
 
             // Cameras
             fixCameraSettings = cfg.Bind(

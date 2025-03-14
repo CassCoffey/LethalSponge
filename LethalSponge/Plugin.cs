@@ -176,12 +176,13 @@ public class Plugin : BaseUnityPlugin
             deduped = true;
         }
 
-        if (Scoops.Config.deDupeShaders.Value)
-        {
-            ShaderService.deDupeBlacklist = Scoops.Config.deDupeShaderBlacklist.Value.ToLower().Trim().Split(';');
-            ShaderService.DedupeAllShaders();
-            deduped = true;
-        }
+        // No shader de-duping until I can figure it out
+        //if (Scoops.Config.deDupeShaders.Value)
+        //{
+        //    ShaderService.deDupeBlacklist = Scoops.Config.deDupeShaderBlacklist.Value.ToLower().Trim().Split(';');
+        //    ShaderService.DedupeAllShaders();
+        //    deduped = true;
+        //}
 
         if (Scoops.Config.deDupeMeshes.Value)
         {

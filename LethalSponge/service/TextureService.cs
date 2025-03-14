@@ -7,16 +7,117 @@ using UnityEngine.Experimental.Rendering;
 
 namespace Scoops.service
 {
+    public class TextureInfo
+    {
+        public string name;
+        public int width;
+        public int height;
+        public GraphicsFormat format;
+
+        public TextureInfo(Texture2D texture)
+        {
+            this.name = texture.name;
+            this.width = texture.width;
+            this.height = texture.height;
+            this.format = texture.graphicsFormat;
+        }
+
+        public override bool Equals(object obj) => this.Equals(obj as TextureInfo);
+
+        public bool Equals(TextureInfo t)
+        {
+            if (t is null)
+            {
+                return false;
+            }
+            if (System.Object.ReferenceEquals(this, t))
+            {
+                return true;
+            }
+            if (this.GetType() != t.GetType())
+            {
+                return false;
+            }
+
+            return (name == t.name) && (width == t.width) && (height == t.height) && (format == t.format);
+        }
+
+        public override int GetHashCode() => (name, width, height, format).GetHashCode();
+
+        public static bool operator ==(TextureInfo lhs, TextureInfo rhs)
+        {
+            if (lhs is null)
+            {
+                if (rhs is null)
+                {
+                    return true;
+                }
+
+                // Only the left side is null.
+                return false;
+            }
+            // Equals handles case of null on right side.
+            return lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(TextureInfo lhs, TextureInfo rhs) => !(lhs == rhs);
+    }
+
     public static class TextureService
     {
-        public static Dictionary<string, Texture2D> TextureDict = new Dictionary<string, Texture2D>();
+        public static Dictionary<TextureInfo, Texture2D> TextureDict = new Dictionary<TextureInfo, Texture2D>();
         public static List<Texture2D> dupedTextures = new List<Texture2D>();
 
         public static string[] deDupeBlacklist;
 
         public static void ResizeAllTextures()
         {
+            Texture2D[] allTextures = Resources.FindObjectsOfTypeAll<Texture2D>();
+            Array.Sort(allTextures, delegate (Texture2D x, Texture2D y) {
+                int id1 = x.GetInstanceID();
+                uint id1ordered = id1 < 0 ? (uint)Math.Abs(id1) + (uint)int.MaxValue : (uint)id1;
+                int id2 = y.GetInstanceID();
+                uint id2ordered = id2 < 0 ? (uint)Math.Abs(id2) + (uint)int.MaxValue : (uint)id2;
+                return (id1ordered).CompareTo(id2ordered);
+            });
+
+            foreach (Texture2D texture in allTextures)
+            {
+                if (texture != null)
+                {
+                    TextureInfo textureInfo = new TextureInfo(texture);
+                    if (!TextureDict.TryGetValue(textureInfo, out Texture2D original))
+                    {
+                        if (Config.resizeTextures.Value && (texture.height > Config.maxTextureSize.Value || texture.width > Config.maxTextureSize.Value))
+                        {
+                            try
+                            {
+                                Texture2D resizedTex = GetResizedTexture(texture);
+                                AddToTextureDict(textureInfo, resizedTex);
+                            }
+                            catch (Exception e)
+                            {
+                                Plugin.Log.LogWarning("Error while resizing Texture " + texture.name + ", continuing:");
+                                Plugin.Log.LogWarning(e);
+                            }
+                        } 
+                        else if (Config.deDupeTextures.Value)
+                        {
+                            AddToTextureDict(textureInfo, texture);
+                        }
+                    }
+                }
+            }
+
             Material[] allMaterials = Resources.FindObjectsOfTypeAll<Material>();
+            //Array.Sort(allMaterials, delegate (Material x, Material y) {
+            //    int id1 = x.GetInstanceID();
+            //    uint id1ordered = id1 < 0 ? (uint)Math.Abs(id1) + (uint)int.MaxValue : (uint)id1;
+            //    int id2 = y.GetInstanceID();
+            //    uint id2ordered = id2 < 0 ? (uint)Math.Abs(id2) + (uint)int.MaxValue : (uint)id2;
+            //    return (id1ordered).CompareTo(id2ordered);
+            //});
+
             foreach (Material material in allMaterials)
             {
                 if (material != null)
@@ -31,36 +132,18 @@ namespace Scoops.service
                                 Texture texture = material.GetTexture(materialShader.GetPropertyName(i));
                                 if (texture != null && texture is Texture2D)
                                 {
-                                    try
+                                    TextureInfo textureInfo = new TextureInfo((Texture2D)texture);
+                                    if (TextureDict.TryGetValue(textureInfo, out Texture2D processedTex))
                                     {
-                                        if (TextureDict.TryGetValue(texture.name, out Texture2D processedTex))
+                                        if (processedTex.GetInstanceID() == texture.GetInstanceID())
                                         {
-                                            if (processedTex.GetInstanceID() == texture.GetInstanceID())
-                                            {
-                                                // Already processed
-                                            }
-                                            else
-                                            {
-                                                material.SetTexture(materialShader.GetPropertyName(i), processedTex);
-                                                dupedTextures.Add((Texture2D)texture);
-                                            }
-                                        }
-                                        else if (Config.resizeTextures.Value && (texture.height > Config.maxTextureSize.Value || texture.width > Config.maxTextureSize.Value))
-                                        {
-                                            Texture2D resizedTex = GetResizedTexture((Texture2D)texture);
-                                            material.SetTexture(materialShader.GetPropertyName(i), resizedTex);
-                                            AddToTextureDict(texture.name, resizedTex);
-                                            dupedTextures.Add((Texture2D)texture);
+                                            // Already processed
                                         }
                                         else
                                         {
-                                            AddToTextureDict(texture.name, (Texture2D)texture);
+                                            material.SetTexture(materialShader.GetPropertyName(i), processedTex);
+                                            dupedTextures.Add((Texture2D)texture);
                                         }
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        Plugin.Log.LogWarning("Error while resizing Texture " + texture.name + ", continuing:");
-                                        Plugin.Log.LogWarning(e);
                                     }
                                 }
                             }
@@ -75,13 +158,14 @@ namespace Scoops.service
                 Resources.UnloadAsset(dupedTex);
             }
 
-            dupedTextures = [];
+            dupedTextures.Clear();
+            TextureDict.Clear();
         }
 
-        public static void AddToTextureDict(string name, Texture2D tex)
+        public static void AddToTextureDict(TextureInfo info, Texture2D tex)
         {
-            if (name == "" || deDupeBlacklist.Contains(name)) return;
-            TextureDict.Add(name, tex);
+            if (info.name == "" || deDupeBlacklist.Contains(info.name.ToLower())) return;
+            TextureDict.Add(info, tex);
         }
 
         public static Texture2D GetResizedTexture(Texture2D texture)
