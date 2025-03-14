@@ -77,8 +77,6 @@ public class Plugin : BaseUnityPlugin
         {
             MeshService.Init();
         }
-
-        SceneManager.sceneLoaded += SceneLoad;
     }
 
     public IEnumerator RegisterAssetBundlesStale()
@@ -158,11 +156,6 @@ public class Plugin : BaseUnityPlugin
         _harmony.PatchAll(typeof(AssetBundleLoadAsyncSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleLoadMultipleSpongePatch));
         _harmony.PatchAll(typeof(AssetBundleLoadMultipleAsyncSpongePatch));
-    }
-
-    public static void SceneLoad(Scene scene, LoadSceneMode mode)
-    {
-        //ManageDeDuping();
     }
 
     public static void ManageDeDuping()
