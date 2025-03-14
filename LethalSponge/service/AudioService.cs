@@ -260,11 +260,11 @@ namespace Scoops.service
                 }
             }
 
-            foreach (AudioClip dupedAudio in dupedAudio)
-            {
-                GameObject.Destroy(dupedAudio);
-                Resources.UnloadAsset(dupedAudio);
-            }
+            //foreach (AudioClip dupedAudio in dupedAudio)
+            //{
+            //    AudioClip.Destroy(dupedAudio);
+            //    Resources.UnloadAsset(dupedAudio);
+            //}
 
             dupedAudio.Clear();
             AudioDict.Clear();

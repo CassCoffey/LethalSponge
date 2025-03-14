@@ -282,11 +282,11 @@ namespace Scoops.service
 
         public static void CleanDupedMeshes()
         {
-            foreach (Mesh dupedMesh in dupedMesh)
-            {
-                GameObject.Destroy(dupedMesh);
-                Resources.UnloadAsset(dupedMesh);
-            }
+            //foreach (Mesh dupedMesh in dupedMesh)
+            //{
+            //    Mesh.Destroy(dupedMesh);
+            //    Resources.UnloadAsset(dupedMesh);
+            //}
 
             dupedMesh.Clear();
         }

@@ -148,11 +148,11 @@ namespace Scoops.service
                 }
             }
 
-            foreach (Shader dupedShader in dupedShader)
-            {
-                GameObject.Destroy(dupedShader);
-                Resources.UnloadAsset(dupedShader);
-            }
+            //foreach (Shader dupedShader in dupedShader)
+            //{
+            //    GameObject.Destroy(dupedShader);
+            //    Resources.UnloadAsset(dupedShader);
+            //}
 
             dupedShader.Clear();
             ShaderDict.Clear();

@@ -88,7 +88,7 @@ namespace Scoops.service
                     TextureInfo textureInfo = new TextureInfo(texture);
                     if (!TextureDict.TryGetValue(textureInfo, out Texture2D original))
                     {
-                        if (Config.resizeTextures.Value && (texture.height > Config.maxTextureSize.Value || texture.width > Config.maxTextureSize.Value))
+                        if (Config.resizeTextures.Value && (texture.height > Config.maxTextureSize.Value || texture.width > Config.maxTextureSize.Value) && texture.graphicsFormat != (GraphicsFormat)54)
                         {
                             try
                             {
@@ -110,13 +110,6 @@ namespace Scoops.service
             }
 
             Material[] allMaterials = Resources.FindObjectsOfTypeAll<Material>();
-            //Array.Sort(allMaterials, delegate (Material x, Material y) {
-            //    int id1 = x.GetInstanceID();
-            //    uint id1ordered = id1 < 0 ? (uint)Math.Abs(id1) + (uint)int.MaxValue : (uint)id1;
-            //    int id2 = y.GetInstanceID();
-            //    uint id2ordered = id2 < 0 ? (uint)Math.Abs(id2) + (uint)int.MaxValue : (uint)id2;
-            //    return (id1ordered).CompareTo(id2ordered);
-            //});
 
             foreach (Material material in allMaterials)
             {
@@ -152,11 +145,11 @@ namespace Scoops.service
                 }
             }
 
-            foreach (Texture2D dupedTex in dupedTextures)
-            {
-                GameObject.Destroy(dupedTex);
-                Resources.UnloadAsset(dupedTex);
-            }
+            //foreach (Texture2D dupedTex in dupedTextures)
+            //{
+            //    Texture2D.Destroy(dupedTex);
+            //    Resources.UnloadAsset(dupedTex);
+            //}
 
             dupedTextures.Clear();
             TextureDict.Clear();
@@ -176,6 +169,9 @@ namespace Scoops.service
 
             int width = Mathf.RoundToInt(texture.width * scale);
             int height = Mathf.RoundToInt(texture.height * scale);
+
+            if (width == 0) width = 1;
+            if (height == 0) height = 1;
 
             GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB;
 

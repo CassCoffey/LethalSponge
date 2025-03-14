@@ -223,7 +223,7 @@ namespace Scoops
                     "Textures",
                     "maxTextureSize",
                     1024,
-                    "All textures with height over this number will be resized down to this number."
+                    new ConfigDescription("All textures with height over this number will be resized down to this number.", new AcceptableValueList<int>(64, 128, 256, 512, 1024, 2048))
             );
 
             // Dedupe
