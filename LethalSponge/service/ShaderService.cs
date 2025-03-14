@@ -24,6 +24,7 @@ namespace Scoops.service
     {
         public string name;
         public int passCount;
+        public int maxLOD;
         public int subshaderCount;
         public int renderQueue;
         public int propertyCount;
@@ -31,12 +32,19 @@ namespace Scoops.service
         public bool alphaCutoff;
         public int surfaceType;
         public uint keywordCount;
-    
-        public ShaderInfo(Shader shader)
+        public string enabledKeywords;
+        public int enabledPasses;
+
+        public ShaderInfo(Shader shader, Material material)
         {
             this.name = shader.name;
-            this.passCount = shader.passCount;
+            this.passCount = 0;
+            this.maxLOD = shader.maximumLOD;
             this.subshaderCount = shader.subshaderCount;
+            for (int i = 0; i < subshaderCount; i++)
+            {
+                passCount += shader.GetPassCountInSubshader(i);
+            }
             this.renderQueue = shader.renderQueue;
             this.propertyCount = shader.GetPropertyCount();
             propertyNames = "";
@@ -45,6 +53,15 @@ namespace Scoops.service
                 propertyNames += shader.GetPropertyName(i);
             }
             this.keywordCount = shader.keywordSpace.keywordCount;
+            enabledPasses = 0;
+            for (int i = 0; i < material.passCount; i++)
+            {
+                enabledPasses += material.GetShaderPassEnabled(material.GetPassName(i)) ? 1 : 0;
+            }
+            foreach (LocalKeyword keyword in material.enabledKeywords)
+            {
+                enabledKeywords += keyword.name;
+            }
         }
     
         public override bool Equals(object obj) => this.Equals(obj as ShaderInfo);
@@ -64,10 +81,10 @@ namespace Scoops.service
                 return false;
             }
     
-            return (name == s.name) && (passCount == s.passCount) && (subshaderCount == s.subshaderCount) && (renderQueue == s.renderQueue) && (propertyCount == s.propertyCount) && (propertyNames == s.propertyNames) && (keywordCount == s.keywordCount);
+            return (name == s.name) && (passCount == s.passCount) && (subshaderCount == s.subshaderCount) && (renderQueue == s.renderQueue) && (propertyCount == s.propertyCount) && (propertyNames == s.propertyNames) && (keywordCount == s.keywordCount) && (maxLOD == s.maxLOD) && (enabledKeywords == s.enabledKeywords) && (enabledPasses == s.enabledPasses);
         }
     
-        public override int GetHashCode() => (name, passCount, subshaderCount, renderQueue, propertyCount, propertyNames).GetHashCode();
+        public override int GetHashCode() => (name, passCount, subshaderCount, renderQueue, propertyCount, propertyNames, maxLOD, enabledKeywords, enabledPasses).GetHashCode();
     
         public static bool operator ==(ShaderInfo lhs, ShaderInfo rhs)
         {
@@ -110,7 +127,7 @@ namespace Scoops.service
             {
                 if (material != null && material.shader != null)
                 {
-                    ShaderInfo shaderInfo = new ShaderInfo(material.shader);
+                    ShaderInfo shaderInfo = new ShaderInfo(material.shader, material);
                     if (ShaderDict.TryGetValue(shaderInfo, out Shader processedShader))
                     {
                         if (processedShader.GetInstanceID() == material.shader.GetInstanceID())
