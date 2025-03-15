@@ -4,13 +4,70 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Networking;
 
 namespace Scoops.service
 {
+    public class AudioInfo
+    {
+        public string name;
+        public float length;
+        public int channels;
+        public int frequency;
+
+        public AudioInfo(AudioClip audio)
+        {
+            this.name = audio.name;
+            this.length = audio.length;
+            this.channels = audio.channels;
+            this.frequency = audio.frequency;
+        }
+
+        public override bool Equals(object obj) => this.Equals(obj as AudioClip);
+
+        public bool Equals(AudioClip a)
+        {
+            if (a is null)
+            {
+                return false;
+            }
+            if (System.Object.ReferenceEquals(this, a))
+            {
+                return true;
+            }
+            if (this.GetType() != a.GetType())
+            {
+                return false;
+            }
+
+            return (name == a.name) && (length == a.length) && (channels == a.channels) && (frequency == a.frequency);
+        }
+
+        public override int GetHashCode() => (name, length, channels, frequency).GetHashCode();
+
+        public static bool operator ==(AudioInfo lhs, AudioInfo rhs)
+        {
+            if (lhs is null)
+            {
+                if (rhs is null)
+                {
+                    return true;
+                }
+
+                // Only the left side is null.
+                return false;
+            }
+            // Equals handles case of null on right side.
+            return lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(AudioInfo lhs, AudioInfo rhs) => !(lhs == rhs);
+    }
+
     public static class AudioService
     {
-        public static Dictionary<string, AudioClip> AudioDict = new Dictionary<string, AudioClip>();
+        public static Dictionary<AudioInfo, AudioClip> AudioDict = new Dictionary<AudioInfo, AudioClip>();
         public static List<AudioClip> dupedAudio = new List<AudioClip>();
 
         public static string[] deDupeBlacklist;
@@ -274,7 +331,9 @@ namespace Scoops.service
         {
             if (clip == null) return null;
 
-            if (AudioDict.TryGetValue(clip.name, out AudioClip processedAudio))
+            AudioInfo info = new AudioInfo(clip);
+
+            if (AudioDict.TryGetValue(info, out AudioClip processedAudio))
             {
                 if (processedAudio.GetInstanceID() == clip.GetInstanceID())
                 {
@@ -289,15 +348,15 @@ namespace Scoops.service
             }
             else
             {
-                AddToAudioDict(clip.name, clip);
+                AddToAudioDict(info, clip);
                 return clip;
             }
         }
 
-        public static void AddToAudioDict(string name, AudioClip audio)
+        public static void AddToAudioDict(AudioInfo info, AudioClip audio)
         {
-            if (name == "" || deDupeBlacklist.Contains(name.ToLower())) return;
-            AudioDict.Add(name, audio);
+            if (info.name == "" || deDupeBlacklist.Contains(info.name.ToLower())) return;
+            AudioDict.Add(info, audio);
         }
     }
 }

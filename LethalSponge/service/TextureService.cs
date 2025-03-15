@@ -83,12 +83,12 @@ namespace Scoops.service
 
             foreach (Texture2D texture in allTextures)
             {
-                if (texture != null)
+                if (texture != null && texture.graphicsFormat != (GraphicsFormat)54)
                 {
                     TextureInfo textureInfo = new TextureInfo(texture);
                     if (!TextureDict.TryGetValue(textureInfo, out Texture2D original))
                     {
-                        if (Config.resizeTextures.Value && (texture.height > Config.maxTextureSize.Value || texture.width > Config.maxTextureSize.Value) && texture.graphicsFormat != (GraphicsFormat)54)
+                        if (Config.resizeTextures.Value && (texture.height > Config.maxTextureSize.Value || texture.width > Config.maxTextureSize.Value))
                         {
                             try
                             {
