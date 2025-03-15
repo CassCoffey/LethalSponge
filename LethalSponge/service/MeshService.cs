@@ -18,12 +18,14 @@ namespace Scoops.service
         public string name;
         public int vertices;
         public Vector3 boundsSize;
+        public bool readable;
 
         public MeshInfo(Mesh mesh)
         {
             this.name = mesh.name;
             this.vertices = mesh.vertexCount;
             this.boundsSize = mesh.bounds.size;
+            this.readable = mesh.isReadable;
         }
 
         public override bool Equals(object obj) => this.Equals(obj as MeshInfo);
@@ -43,10 +45,10 @@ namespace Scoops.service
                 return false;
             }
 
-            return (name == m.name) && (vertices == m.vertices) && (boundsSize == m.boundsSize);
+            return (name == m.name) && (vertices == m.vertices) && (boundsSize == m.boundsSize) && (readable == m.readable);
         }
 
-        public override int GetHashCode() => (name, vertices, boundsSize).GetHashCode();
+        public override int GetHashCode() => (name, vertices, boundsSize, readable).GetHashCode();
 
         public static bool operator ==(MeshInfo lhs, MeshInfo rhs)
         {
@@ -359,9 +361,10 @@ namespace Scoops.service
                         } 
                         else
                         {
+                            bool readable = sourceMesh.isReadable;
                             newMesh = DecimateMesh(sourceMesh, quality);
                             newMesh.name = sourceMesh.name;
-                            newMesh.UploadMeshData(true);
+                            newMesh.UploadMeshData(!readable);
                         }
 
                         decimatedMeshDict[sourceId] = newMesh;
