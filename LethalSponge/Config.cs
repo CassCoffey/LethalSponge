@@ -18,6 +18,7 @@ namespace Scoops
         public static ConfigEntry<bool> fixInputActions;
 
         public static ConfigEntry<bool> generateLODs;
+        public static ConfigEntry<string> generateLODsBlacklist;
         public static ConfigEntry<bool> useLOD2;
         public static ConfigEntry<float> LOD1Start;
         public static ConfigEntry<float> LOD2Start;
@@ -26,6 +27,7 @@ namespace Scoops
         public static ConfigEntry<float> cullStart;
         public static ConfigEntry<bool> fixComplexMeshes;
         public static ConfigEntry<float> complexMeshVertCutoff;
+        public static ConfigEntry<string> fixComplexMeshesBlacklist;
         public static ConfigEntry<bool> preserveSurfaceCurvature;
 
         public static ConfigEntry<bool> resizeTextures;
@@ -155,7 +157,13 @@ namespace Scoops
                     "Meshes",
                     "generateLODs",
                     true,
-                    "Should Sponge automatically generate LODs for meshes? (Will increase load times and memory usage slightly)"
+                    "Should Sponge automatically generate LODs for meshes? (Will increase load times and memory usage slightly, and increase FPS slightly when there's lots of scrap on screen)"
+            );
+            generateLODsBlacklist = cfg.Bind(
+                    "Meshes",
+                    "generateLODsBlacklist",
+                    "ExtensionLadderItem;LockPickerItem",
+                    "GameObject names in this semicolon-separated list will not generate LODs."
             );
             useLOD2 = cfg.Bind(
                     "Meshes",
@@ -190,7 +198,7 @@ namespace Scoops
             cullStart = cfg.Bind(
                     "Meshes",
                     "cullStart",
-                    0.02f,
+                    0.01f,
                     new ConfigDescription("Where should the last/cull LOD start? (Measured in mesh size on screen) (requires generateLODs = true)", new AcceptableValueRange<float>(0f, 1f))
             );
             fixComplexMeshes = cfg.Bind(
@@ -204,6 +212,12 @@ namespace Scoops
                     "complexMeshVertCutoff",
                     5000f,
                     "What is the minimum Vertex Density (Vertices over Meters Cubed) that meshes should be considered 'too complex'. This also determines the minimum Vertices for the cutoff."
+            );
+            fixComplexMeshesBlacklist = cfg.Bind(
+                    "Meshes",
+                    "fixComplexMeshesBlacklist",
+                    "",
+                    "Mesh names in this semicolon-separated list will be ignored while fixing complex meshes."
             );
             preserveSurfaceCurvature = cfg.Bind(
                     "Meshes",

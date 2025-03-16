@@ -82,6 +82,8 @@ namespace Scoops.service
         public static LayerMask LODlayers = LayerMask.GetMask("Props", "Default", "Enemies");
 
         public static string[] deDupeBlacklist;
+        public static string[] LODBlacklist;
+        public static string[] fixComplexBlacklist;
 
         private static SimplificationOptions simplificationOptions = SimplificationOptions.Default;
         private static LODLevel[] levels = null;
@@ -92,6 +94,9 @@ namespace Scoops.service
 
         public static void Init()
         {
+            LODBlacklist = Config.generateLODsBlacklist.Value.ToLower().Trim().Split(';');
+            fixComplexBlacklist = Config.fixComplexMeshesBlacklist.Value.ToLower().Trim().Split(';');
+
             simplificationOptions = new SimplificationOptions
             {
                 PreserveBorderEdges = true,
@@ -249,7 +254,8 @@ namespace Scoops.service
 
             foreach (MeshCollider meshCollider in allMeshColliders)
             {
-                if (meshCollider != null && meshCollider.sharedMesh != null)
+                // Only going to dedupe readable meshcolliders for now
+                if (meshCollider != null && meshCollider.sharedMesh != null && meshCollider.sharedMesh.isReadable)
                 {
                     MeshInfo meshInfo = new MeshInfo(meshCollider.sharedMesh);
                     if (MeshDict.TryGetValue(meshInfo, out Mesh processedMesh))
@@ -304,6 +310,10 @@ namespace Scoops.service
             LODGroup[] existingLODs = gameObject.GetComponentsInChildren<LODGroup>();
             if (existingLODs.Length > 0) return;
 
+            // Ignore blacklisted gameobjects
+            string name = gameObject.name.ToLower().Replace("(clone)", "").Replace(" (instance)", "");
+            if (LODBlacklist.Contains(name)) return;
+
             try
             {
                 LODGenerator.GenerateLODs(gameObject, levels, true, simplificationOptions, root);
@@ -322,7 +332,9 @@ namespace Scoops.service
             foreach (MeshFilter meshFilter in allMeshFilters)
             {
                 Mesh sourceMesh = meshFilter.sharedMesh;
-                if (sourceMesh && sourceMesh.vertexCount > 1000 && !meshFilter.gameObject.GetComponent<SkinnedMeshRenderer>())
+                float vertCutoff = Config.complexMeshVertCutoff.Value;
+                if (sourceMesh && sourceMesh.vertexCount > vertCutoff && 
+                    !meshFilter.gameObject.GetComponent<SkinnedMeshRenderer>() && !fixComplexBlacklist.Contains(sourceMesh.name.ToLower()))
                 {
                     int sourceId = sourceMesh.GetInstanceID();
 
@@ -342,7 +354,6 @@ namespace Scoops.service
                         float quality = 1f;
 
                         Renderer renderer = meshFilter.gameObject.GetComponent<Renderer>();
-                        float vertCutoff = Config.complexMeshVertCutoff.Value;
                         if (renderer != null && sourceMesh.vertexCount > vertCutoff)
                         {
                             float largestDimension = Mathf.Max(renderer.bounds.size.x, Mathf.Max(renderer.bounds.size.y, renderer.bounds.size.z));
