@@ -27,6 +27,8 @@
         <AssetBundleDir>AssetBundles\</AssetBundleDir>
         <!-- Name of the Unity Asset Bundle for this mod -->
         <AssetBundleName>spongeassets</AssetBundleName>
+        <!-- Name of the base game asset Bundle for this mod -->
+        <BaseGameBundleName>basegameassets</BaseGameBundleName>
     </PropertyGroup>
 
     <ItemGroup>

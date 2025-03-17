@@ -11,6 +11,7 @@ using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Rendering;
 using System;
 using UnityEngine.SceneManagement;
+using System.IO;
 
 namespace Scoops;
 
@@ -18,7 +19,7 @@ public static class PluginInformation
 {
     public const string PLUGIN_GUID = "LethalSponge";
     public const string PLUGIN_NAME = "LethalSponge";
-    public const string PLUGIN_VERSION = "1.1.4";
+    public const string PLUGIN_VERSION = "1.1.5";
 }
 
 [BepInPlugin(PluginInformation.PLUGIN_GUID, PluginInformation.PLUGIN_NAME, PluginInformation.PLUGIN_VERSION)]
@@ -30,10 +31,15 @@ public class Plugin : BaseUnityPlugin
     public static Config SpongeConfig { get; internal set; }
 
     public static AssetBundle SpongeAssets;
+    public static AssetBundle BaseGameAssets;
+
+    public static HashSet<string> allBaseAssetNames;
 
     public static ManualLogSource Log => Instance.Logger;
 
     private readonly Harmony _harmony = new(PluginInformation.PLUGIN_GUID);
+
+    private static string baseGameBundleFilePath;
 
     public Plugin()
     {
@@ -47,6 +53,20 @@ public class Plugin : BaseUnityPlugin
         var dllFolderPath = System.IO.Path.GetDirectoryName(Info.Location);
         var assetBundleFilePath = System.IO.Path.Combine(dllFolderPath, "spongeassets");
         SpongeAssets = AssetBundle.LoadFromFile(assetBundleFilePath);
+        baseGameBundleFilePath = System.IO.Path.Combine(dllFolderPath, "basegameassets");
+        BaseGameAssets = AssetBundle.LoadFromFile(baseGameBundleFilePath);
+
+        allBaseAssetNames = new HashSet<string>();
+        foreach (string assetName in BaseGameAssets.GetAllAssetNames())
+        {
+            string assetNameNoExtension = Path.GetFileNameWithoutExtension(assetName).ToLower();
+            if (!allBaseAssetNames.Contains(assetNameNoExtension))
+            {
+                allBaseAssetNames.Add(assetNameNoExtension);
+            }
+        }
+
+        BaseGameAssets.Unload(true);
 
         SpongeConfig = new(base.Config);
 
@@ -162,9 +182,11 @@ public class Plugin : BaseUnityPlugin
     {
         bool deduped = false;
 
+        BaseGameAssets = AssetBundle.LoadFromFile(baseGameBundleFilePath);
+
         if (Scoops.Config.deDupeTextures.Value || Scoops.Config.resizeTextures.Value)
         {
-            TextureService.deDupeBlacklist = Scoops.Config.deDupeTextureBlacklist.Value.ToLower().Trim().Split(';');
+            TextureService.deDupeBlacklist = Scoops.Config.deDupeTextureBlacklist.Value.ToLower().Split(';');
             TextureService.ResizeAllTextures();
             deduped = true;
         }
@@ -172,26 +194,27 @@ public class Plugin : BaseUnityPlugin
         // No shader de-duping until I can figure it out
         //if (Scoops.Config.deDupeShaders.Value)
         //{
-        //    ShaderService.deDupeBlacklist = Scoops.Config.deDupeShaderBlacklist.Value.ToLower().Trim().Split(';');
+        //    ShaderService.deDupeBlacklist = Scoops.Config.deDupeShaderBlacklist.Value.ToLower().Split(';');
         //    ShaderService.DedupeAllShaders();
         //    deduped = true;
         //}
 
         if (Scoops.Config.deDupeMeshes.Value)
         {
-            MeshService.deDupeBlacklist = Scoops.Config.deDupeMeshBlacklist.Value.ToLower().Trim().Split(';');
+            MeshService.deDupeBlacklist = Scoops.Config.deDupeMeshBlacklist.Value.ToLower().Split(';');
             MeshService.DedupeAllMeshes();
             deduped = true;
         }
 
         if (Scoops.Config.deDupeAudio.Value)
         {
-            AudioService.deDupeBlacklist = Scoops.Config.deDupeAudioBlacklist.Value.ToLower().Trim().Split(';');
+            AudioService.deDupeBlacklist = Scoops.Config.deDupeAudioBlacklist.Value.ToLower().Split(';');
             AudioService.DedupeAllAudio();
             deduped = true;
         }
 
         // Some final cleanup
+        BaseGameAssets.Unload(false);
         if (deduped)
         {
             Resources.UnloadUnusedAssets();

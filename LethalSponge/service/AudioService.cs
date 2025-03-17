@@ -12,21 +12,19 @@ namespace Scoops.service
     public class AudioInfo
     {
         public string name;
-        public float length;
+        public int length;
         public int channels;
-        public int frequency;
 
         public AudioInfo(AudioClip audio)
         {
             this.name = audio.name;
-            this.length = audio.length;
+            this.length = Mathf.RoundToInt(audio.length);
             this.channels = audio.channels;
-            this.frequency = audio.frequency;
         }
 
-        public override bool Equals(object obj) => this.Equals(obj as AudioClip);
+        public override bool Equals(object obj) => this.Equals(obj as AudioInfo);
 
-        public bool Equals(AudioClip a)
+        public bool Equals(AudioInfo a)
         {
             if (a is null)
             {
@@ -41,10 +39,10 @@ namespace Scoops.service
                 return false;
             }
 
-            return (name == a.name) && (length == a.length) && (channels == a.channels) && (frequency == a.frequency);
+            return (name == a.name) && (length == a.length) && (channels == a.channels);
         }
 
-        public override int GetHashCode() => (name, length, channels, frequency).GetHashCode();
+        public override int GetHashCode() => (name, length, channels).GetHashCode();
 
         public static bool operator ==(AudioInfo lhs, AudioInfo rhs)
         {
@@ -356,6 +354,7 @@ namespace Scoops.service
         public static void AddToAudioDict(AudioInfo info, AudioClip audio)
         {
             if (info.name == "" || deDupeBlacklist.Contains(info.name.ToLower())) return;
+
             AudioDict.Add(info, audio);
         }
     }

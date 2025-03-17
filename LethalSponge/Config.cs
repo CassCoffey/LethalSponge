@@ -19,6 +19,7 @@ namespace Scoops
 
         public static ConfigEntry<bool> generateLODs;
         public static ConfigEntry<string> generateLODsBlacklist;
+        public static ConfigEntry<bool> generateLODMeshes;
         public static ConfigEntry<bool> useLOD2;
         public static ConfigEntry<float> LOD1Start;
         public static ConfigEntry<float> LOD2Start;
@@ -157,13 +158,19 @@ namespace Scoops
                     "Meshes",
                     "generateLODs",
                     true,
-                    "Should Sponge automatically generate LODs for meshes? (Will increase load times and memory usage slightly, and increase FPS slightly when there's lots of scrap on screen)"
+                    "Should Sponge automatically generate LODs for scrap/items?"
             );
             generateLODsBlacklist = cfg.Bind(
                     "Meshes",
                     "generateLODsBlacklist",
-                    "ExtensionLadderItem;LockPickerItem",
+                    "ExtensionLadderItem;LockPickerItem;JetpackItem",
                     "GameObject names in this semicolon-separated list will not generate LODs."
+            );
+            generateLODMeshes = cfg.Bind(
+                    "Meshes",
+                    "generateLODMeshes",
+                    false,
+                    "Should LOD levels use simplified meshes? (This will increase load times/memory usage for a slight fps boost in some cases, not generally recommended)"
             );
             useLOD2 = cfg.Bind(
                     "Meshes",
@@ -181,7 +188,7 @@ namespace Scoops
                     "Meshes",
                     "LOD1Quality",
                     0.65f,
-                    new ConfigDescription("What quality level the first LOD be? (requires generateLODs = true)", new AcceptableValueRange<float>(0f, 1f))
+                    new ConfigDescription("What quality level the first LOD be? (requires generateLODs = true and generateLODMeshes = true)", new AcceptableValueRange<float>(0f, 1f))
             );
             LOD2Start = cfg.Bind(
                     "Meshes",
@@ -193,7 +200,7 @@ namespace Scoops
                     "Meshes",
                     "LOD2Quality",
                     0.15f,
-                    new ConfigDescription("What quality level the second LOD be? (requires generateLODs = true and useLOD2 = true)", new AcceptableValueRange<float>(0f, 1f))
+                    new ConfigDescription("What quality level the second LOD be? (requires generateLODs = true, generateLODMeshes = true, and useLOD2 = true)", new AcceptableValueRange<float>(0f, 1f))
             );
             cullStart = cfg.Bind(
                     "Meshes",
@@ -263,7 +270,7 @@ namespace Scoops
             deDupeTextureBlacklist = cfg.Bind(
                     "Dedupe",
                     "deDupeTextureBlacklist",
-                    "playersuittex2b;scavengerplayermodel",
+                    "playersuittex2b;scavengerplayermodel;LightningBallSpriteSheet2;glasscracked 1",
                     "Texture names in this semicolon-separated list will be exempt from de-duping."
             );
             deDupeAudio = cfg.Bind(

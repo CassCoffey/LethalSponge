@@ -12,14 +12,14 @@ namespace Scoops.service
         public string name;
         public int width;
         public int height;
-        public GraphicsFormat format;
+        public TextureFormat format;
 
         public TextureInfo(Texture2D texture)
         {
             this.name = texture.name;
             this.width = texture.width;
             this.height = texture.height;
-            this.format = texture.graphicsFormat;
+            this.format = texture.format;
         }
 
         public override bool Equals(object obj) => this.Equals(obj as TextureInfo);
@@ -88,22 +88,43 @@ namespace Scoops.service
                     TextureInfo textureInfo = new TextureInfo(texture);
                     if (!TextureDict.TryGetValue(textureInfo, out Texture2D original))
                     {
-                        if (Config.resizeTextures.Value && (texture.height > Config.maxTextureSize.Value || texture.width > Config.maxTextureSize.Value))
+                        Texture2D temp = texture;
+
+                        if (temp.name == "TexturesCom_Metal_GalvanizedSteel_Old_512_albedo")
+                        {
+                            Plugin.Log.LogInfo("found metal - " + temp.name);
+                        }
+
+                        if (Plugin.allBaseAssetNames.Contains(texture.name.ToLower()))
+                        {
+                            Texture2D baseGame = Plugin.BaseGameAssets.LoadAsset<Texture2D>(texture.name.ToLower());
+                            if (baseGame != null)
+                            {
+                                TextureInfo baseGameInfo = new TextureInfo(baseGame);
+
+                                if (baseGameInfo == textureInfo)
+                                {
+                                    temp = baseGame;
+                                }
+                            }
+                        }
+
+                        if (Config.resizeTextures.Value && (temp.height > Config.maxTextureSize.Value || temp.width > Config.maxTextureSize.Value))
                         {
                             try
                             {
-                                Texture2D resizedTex = GetResizedTexture(texture);
+                                Texture2D resizedTex = GetResizedTexture(temp);
                                 AddToTextureDict(textureInfo, resizedTex);
                             }
                             catch (Exception e)
                             {
-                                Plugin.Log.LogWarning("Error while resizing Texture " + texture.name + ", continuing:");
+                                Plugin.Log.LogWarning("Error while resizing Texture " + temp.name + ", continuing:");
                                 Plugin.Log.LogWarning(e);
                             }
                         } 
                         else if (Config.deDupeTextures.Value)
                         {
-                            AddToTextureDict(textureInfo, texture);
+                            AddToTextureDict(textureInfo, temp);
                         }
                     }
                 }

@@ -475,7 +475,7 @@ namespace UnityMeshSimplifier
             var mesh = renderer.mesh;
 
             // Simplify the mesh if necessary
-            if (level.Quality < 1f)
+            if (level.Quality < 1f && Scoops.Config.generateLODMeshes.Value)
             {
                 MeshInfo meshInfo = new MeshInfo(mesh);
                 meshInfo.name = mesh.name + "LOD" + levelIndex;

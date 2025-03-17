@@ -9,6 +9,7 @@ using Unity.Properties;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 using UnityMeshSimplifier;
 
 namespace Scoops.service
@@ -285,6 +286,7 @@ namespace Scoops.service
         public static void AddToMeshDict(MeshInfo info, Mesh mesh)
         {
             if (info.name == "" || deDupeBlacklist.Contains(info.name.ToLower())) return;
+
             MeshDict.Add(info, mesh);
         }
 
