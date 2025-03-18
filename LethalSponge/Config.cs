@@ -270,7 +270,7 @@ namespace Scoops
             deDupeTextureBlacklist = cfg.Bind(
                     "Dedupe",
                     "deDupeTextureBlacklist",
-                    "playersuittex2b;scavengerplayermodel;LightningBallSpriteSheet2;glasscracked 1",
+                    "playersuittex2b;scavengerplayermodel;LightningBallSpriteSheet2",
                     "Texture names in this semicolon-separated list will be exempt from de-duping."
             );
             deDupeAudio = cfg.Bind(

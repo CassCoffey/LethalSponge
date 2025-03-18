@@ -90,24 +90,19 @@ namespace Scoops.service
                     {
                         Texture2D temp = texture;
 
-                        if (temp.name == "TexturesCom_Metal_GalvanizedSteel_Old_512_albedo")
-                        {
-                            Plugin.Log.LogInfo("found metal - " + temp.name);
-                        }
-
-                        if (Plugin.allBaseAssetNames.Contains(texture.name.ToLower()))
-                        {
-                            Texture2D baseGame = Plugin.BaseGameAssets.LoadAsset<Texture2D>(texture.name.ToLower());
-                            if (baseGame != null)
-                            {
-                                TextureInfo baseGameInfo = new TextureInfo(baseGame);
-
-                                if (baseGameInfo == textureInfo)
-                                {
-                                    temp = baseGame;
-                                }
-                            }
-                        }
+                        //if (Plugin.allBaseAssetNames.Contains(texture.name.ToLower()))
+                        //{
+                        //    Texture2D baseGame = Plugin.BaseGameAssets.LoadAsset<Texture2D>(texture.name.ToLower());
+                        //    if (baseGame != null)
+                        //    {
+                        //        TextureInfo baseGameInfo = new TextureInfo(baseGame);
+                        //
+                        //        if (baseGameInfo == textureInfo)
+                        //        {
+                        //            temp = baseGame;
+                        //        }
+                        //    }
+                        //}
 
                         if (Config.resizeTextures.Value && (temp.height > Config.maxTextureSize.Value || temp.width > Config.maxTextureSize.Value))
                         {
