@@ -251,7 +251,7 @@ namespace Scoops
             deDupeMeshes = cfg.Bind(
                     "Dedupe",
                     "deDupeMeshes",
-                    true,
+                    false,
                     "Should Sponge automatically remove duplicate meshes? (Will increase load times and decrease RAM/VRAM usage)"
             );
             deDupeMeshBlacklist = cfg.Bind(
@@ -264,7 +264,7 @@ namespace Scoops
             deDupeTextures = cfg.Bind(
                     "Dedupe",
                     "deDupeTextures",
-                    true,
+                    false,
                     "Should Sponge automatically remove duplicate textures? (Will increase load times and decrease VRAM usage)"
             );
             deDupeTextureBlacklist = cfg.Bind(
@@ -276,7 +276,7 @@ namespace Scoops
             deDupeAudio = cfg.Bind(
                     "Dedupe",
                     "deDupeAudio",
-                    true,
+                    false,
                     "Should Sponge automatically remove duplicate audio clips? (Will increase load times and decrease RAM usage)"
             );
             deDupeAudioBlacklist = cfg.Bind(

@@ -12,6 +12,7 @@ namespace Scoops.service
         public string name;
         public int width;
         public int height;
+        public int mipmapCount;
         public TextureFormat format;
 
         public TextureInfo(Texture2D texture)
@@ -19,6 +20,7 @@ namespace Scoops.service
             this.name = texture.name;
             this.width = texture.width;
             this.height = texture.height;
+            this.mipmapCount = texture.mipmapCount;
             this.format = texture.format;
         }
 
@@ -39,10 +41,10 @@ namespace Scoops.service
                 return false;
             }
 
-            return (name == t.name) && (width == t.width) && (height == t.height) && (format == t.format);
+            return (name == t.name) && (width == t.width) && (height == t.height) && (format == t.format) && (mipmapCount == t.mipmapCount);
         }
 
-        public override int GetHashCode() => (name, width, height, format).GetHashCode();
+        public override int GetHashCode() => (name, width, height, format, mipmapCount).GetHashCode();
 
         public static bool operator ==(TextureInfo lhs, TextureInfo rhs)
         {

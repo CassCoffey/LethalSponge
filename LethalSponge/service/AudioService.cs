@@ -12,14 +12,16 @@ namespace Scoops.service
     public class AudioInfo
     {
         public string name;
-        public int length;
+        public float length;
         public int channels;
+        public int frequency;
 
         public AudioInfo(AudioClip audio)
         {
             this.name = audio.name;
-            this.length = Mathf.RoundToInt(audio.length);
+            this.length = audio.length;
             this.channels = audio.channels;
+            this.frequency = audio.frequency;
         }
 
         public override bool Equals(object obj) => this.Equals(obj as AudioInfo);
@@ -39,10 +41,10 @@ namespace Scoops.service
                 return false;
             }
 
-            return (name == a.name) && (length == a.length) && (channels == a.channels);
+            return (name == a.name) && (length == a.length) && (channels == a.channels) && (frequency == a.frequency);
         }
 
-        public override int GetHashCode() => (name, length, channels).GetHashCode();
+        public override int GetHashCode() => (name, length, channels, frequency).GetHashCode();
 
         public static bool operator ==(AudioInfo lhs, AudioInfo rhs)
         {
