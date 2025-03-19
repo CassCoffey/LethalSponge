@@ -19,11 +19,12 @@ public static class PluginInformation
 {
     public const string PLUGIN_GUID = "LethalSponge";
     public const string PLUGIN_NAME = "LethalSponge";
-    public const string PLUGIN_VERSION = "1.1.6";
+    public const string PLUGIN_VERSION = "1.1.7";
 }
 
 [BepInPlugin(PluginInformation.PLUGIN_GUID, PluginInformation.PLUGIN_NAME, PluginInformation.PLUGIN_VERSION)]
 [BepInDependency("imabatby.lethallevelloader", BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency("me.swipez.melonloader.morecompany", BepInDependency.DependencyFlags.SoftDependency)]
 public class Plugin : BaseUnityPlugin
 {
     public static Plugin Instance { get; set; }
@@ -77,6 +78,11 @@ public class Plugin : BaseUnityPlugin
         if (Scoops.Config.fixComplexMeshes.Value || Scoops.Config.generateLODs.Value)
         {
             MeshService.Init();
+        }
+
+        if (Scoops.Config.fixComplexMeshes.Value && Scoops.Config.fixComplexCosmetics.Value && MoreCompanyCompat.Enabled)
+        {
+            MoreCompanyCompat.DecimateAllCosmetics();
         }
     }
 
@@ -146,6 +152,16 @@ public class Plugin : BaseUnityPlugin
         if (Scoops.Config.generateLODs.Value || Scoops.Config.fixComplexMeshes.Value)
         {
             _harmony.PatchAll(typeof(GrabbableObjectPatches));
+        }
+
+        if (Scoops.Config.fixComplexMeshes.Value && Scoops.Config.fixComplexCosmetics.Value && MoreCompanyCompat.Enabled)
+        {
+            _harmony.PatchAll(typeof(MoreCompanyCompat));
+        }
+
+        if (Scoops.Config.vSyncCount.Value != 1)
+        {
+            _harmony.PatchAll(typeof(IngamePlayerSettingsSpongePatch));
         }
     }
 

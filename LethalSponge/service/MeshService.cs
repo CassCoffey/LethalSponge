@@ -1,5 +1,7 @@
-﻿using HarmonyLib;
+﻿using GameNetcodeStuff;
+using HarmonyLib;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -75,7 +77,7 @@ namespace Scoops.service
         public static Dictionary<int, Mesh> decimatedMeshDict = new Dictionary<int, Mesh>();
         public static Dictionary<MeshInfo, Mesh> lodMeshDict = new Dictionary<MeshInfo, Mesh>();
         public static HashSet<int> decimatedMeshes = new HashSet<int>();
-        public static HashSet<int> generatedLODs = new HashSet<int>();
+        public static Dictionary<int, int> generatedLODs = new Dictionary<int, int>();
 
         public static Dictionary<MeshInfo, Mesh> MeshDict = new Dictionary<MeshInfo, Mesh>();
         public static List<Mesh> dupedMesh = new List<Mesh>();
@@ -84,7 +86,8 @@ namespace Scoops.service
 
         public static string[] deDupeBlacklist;
         public static string[] LODBlacklist;
-        public static string[] fixComplexBlacklist;
+        public static string[] fixComplexMeshBlacklist;
+        public static string[] fixComplexGameObjectBlacklist;
 
         private static SimplificationOptions simplificationOptions = SimplificationOptions.Default;
         private static LODLevel[] levels = null;
@@ -95,8 +98,9 @@ namespace Scoops.service
 
         public static void Init()
         {
-            LODBlacklist = Config.generateLODsBlacklist.Value.ToLower().Trim().Split(';');
-            fixComplexBlacklist = Config.fixComplexMeshesBlacklist.Value.ToLower().Trim().Split(';');
+            LODBlacklist = Config.generateLODsBlacklist.Value.ToLower().Split(';');
+            fixComplexMeshBlacklist = Config.fixComplexMeshesBlacklist.Value.ToLower().Split(';');
+            fixComplexGameObjectBlacklist = Config.fixComplexMeshesGameObjectBlacklist.Value.ToLower().Split(';');
 
             simplificationOptions = new SimplificationOptions
             {
@@ -301,10 +305,10 @@ namespace Scoops.service
             dupedMesh.Clear();
         }
 
-        public static void GenerateLODs(GameObject gameObject, Transform root = null)
+        public static void GenerateLODs(GameObject gameObject, Transform root = null, GrabbableObject grabbable = null)
         {
             // Ignore objects we've already generated LODs for
-            if (generatedLODs.Contains(gameObject.GetInstanceID())) return;
+            if (generatedLODs.TryGetValue(gameObject.GetInstanceID(), out int value)) return;
             if (gameObject.transform.Find(LODGenerator.LODParentGameObjectName) != null) return;
             if (root != null && root.Find(LODGenerator.LODParentGameObjectName) != null) return;
 
@@ -319,7 +323,12 @@ namespace Scoops.service
             try
             {
                 LODGenerator.GenerateLODs(gameObject, levels, true, simplificationOptions, root);
-                generatedLODs.Add(gameObject.GetInstanceID());
+                int hash = gameObject.GetHashCode();
+                if (!ReferenceEquals(grabbable, null))
+                {
+                    hash = GetGrabbableHash(grabbable);
+                }
+                generatedLODs.Add(gameObject.GetInstanceID(), hash);
             }
             catch (Exception e)
             {
@@ -327,8 +336,56 @@ namespace Scoops.service
             }
         }
 
+        public static void RegenerateLODs(GrabbableObject grabbable, Transform root = null)
+        {
+            // Make sure we've already generated LODs for this object
+            if (!generatedLODs.TryGetValue(grabbable.gameObject.GetInstanceID(), out int hash)) return;
+
+            int newHash = GetGrabbableHash(grabbable);
+
+            // Item is not changed
+            if (newHash == hash) return;
+
+            if (LODGenerator.DestroyLODs(grabbable.gameObject)) 
+            {
+                grabbable.StartCoroutine(RegenerateLODsCoroutine(grabbable.gameObject, root, newHash));
+            }
+        }
+
+        public static IEnumerator RegenerateLODsCoroutine(GameObject gameObject, Transform root = null, int hash = 0)
+        {
+            // Wait 2 frames for previous LODs to be destroyed
+            yield return 0;
+            yield return 0;
+
+            if (!gameObject.transform.Find(LODGenerator.LODParentGameObjectName))
+            {
+                try
+                {
+                    LODGenerator.GenerateLODs(gameObject, levels, true, simplificationOptions, root);
+                    generatedLODs[gameObject.GetInstanceID()] = hash;
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning(e);
+                }
+            }
+        }
+
+        private static int GetGrabbableHash(GrabbableObject grabbable)
+        {
+            if (grabbable.mainObjectRenderer == null) return grabbable.GetHashCode();
+
+            MeshFilter filter = grabbable.mainObjectRenderer.GetComponent<MeshFilter>();
+            int materialsHash = ((IStructuralEquatable)grabbable.mainObjectRenderer.sharedMaterials).GetHashCode(EqualityComparer<Material>.Default);
+            int filterHash = filter ? filter.mesh.GetHashCode() : 0;
+            return HashCode.Combine(materialsHash, filterHash);
+        }
+
         public static void DecimateAllMeshes(GameObject gameObject)
         {
+            if (fixComplexGameObjectBlacklist.Contains(gameObject.name.ToLower())) return;
+
             MeshFilter[] allMeshFilters = gameObject.GetComponentsInChildren<MeshFilter>();
 
             foreach (MeshFilter meshFilter in allMeshFilters)
@@ -336,9 +393,11 @@ namespace Scoops.service
                 Mesh sourceMesh = meshFilter.sharedMesh;
                 float vertCutoff = Config.complexMeshVertCutoff.Value;
                 if (sourceMesh && sourceMesh.vertexCount > vertCutoff && 
-                    !meshFilter.gameObject.GetComponent<SkinnedMeshRenderer>() && !fixComplexBlacklist.Contains(sourceMesh.name.ToLower()))
+                    !meshFilter.gameObject.GetComponent<SkinnedMeshRenderer>() && 
+                    !fixComplexMeshBlacklist.Contains(sourceMesh.name.ToLower()))
                 {
                     int sourceId = sourceMesh.GetInstanceID();
+                    string sourceName = sourceMesh.name;
 
                     // Skip meshes we've already set
                     if (decimatedMeshes.Contains(sourceId)) continue;
@@ -349,9 +408,6 @@ namespace Scoops.service
                     } 
                     else
                     {
-                        if (!sourceMesh.isReadable) sourceMesh = GetReadableMesh(sourceMesh);
-                        if (sourceMesh == null) continue;
-
                         Mesh newMesh = null;
                         float quality = 1f;
 
@@ -364,7 +420,13 @@ namespace Scoops.service
 
                             if (vertPerMeter >= vertCutoff)
                             {
-                                quality = Mathf.Clamp(vertCutoff / vertPerMeter, 0.2f, 1f);
+                                if (!Config.minimalLogging.Value)
+                                {
+                                    Plugin.Log.LogWarning("Found complex mesh with Mesh name: " + sourceName);
+                                    Plugin.Log.LogWarning(" - and GameObject name: " + gameObject.name);
+                                    Plugin.Log.LogWarning(" - with " + sourceMesh.vertexCount + " vertices");
+                                }
+                                quality = Mathf.Clamp(vertCutoff / vertPerMeter, 0.15f, 1f);
                             }
                         }
                         
@@ -375,6 +437,11 @@ namespace Scoops.service
                         else
                         {
                             bool readable = sourceMesh.isReadable;
+                            if (!readable)
+                            {
+                                sourceMesh = GetReadableMesh(sourceMesh);
+                                sourceMesh.name = sourceName;
+                            }
                             newMesh = DecimateMesh(sourceMesh, quality);
                             newMesh.name = sourceMesh.name;
                             newMesh.UploadMeshData(!readable);
@@ -461,10 +528,22 @@ namespace Scoops.service
 
         public static void ProcessGrabbableObject(GrabbableObject grabbableObject)
         {
-            ProcessGameObject(grabbableObject.gameObject, grabbableObject.mainObjectRenderer.transform);
+            if (!initialized)
+            {
+                Init();
+            }
+
+            if (Config.fixComplexMeshes.Value && Config.fixComplexGrabbable.Value)
+            {
+                DecimateAllMeshes(grabbableObject.gameObject);
+            }
+            if (Config.generateLODs.Value)
+            {
+                GenerateLODs(grabbableObject.gameObject, grabbableObject.mainObjectRenderer ? grabbableObject.mainObjectRenderer.transform : null, grabbableObject);
+            }
         }
 
-        public static void ProcessGameObject(GameObject gameObject, Transform root = null, bool generateLODs = true)
+        public static void ProcessGameObject(GameObject gameObject, Transform root = null)
         {
             if (!initialized)
             {
@@ -475,36 +554,42 @@ namespace Scoops.service
             {
                 DecimateAllMeshes(gameObject);
             }
-            if (Config.generateLODs.Value && generateLODs)
+            if (Config.generateLODs.Value)
             {
                 GenerateLODs(gameObject, root);
             }
         }
+    }
 
-        public static void ProcessScene(Scene scene, LoadSceneMode loadSceneMode)
+    public static class GrabbableObjectPatches
+    {
+        [HarmonyPatch(typeof(RoundManager))]
+        [HarmonyPatch("SyncScrapValuesClientRpc")]
+        [HarmonyPostfix]
+        [HarmonyPriority(Priority.Last)]
+        public static void RoundManager_SyncScrapValuesClientRpc(NetworkObjectReference[] spawnedScrap, int[] allScrapValue)
         {
-            foreach (GameObject rootObject in scene.GetRootGameObjects())
+            for (int i = 0; i < spawnedScrap.Length; i++)
             {
-                GrabbableObject[] grabbableObjects = rootObject.GetComponentsInChildren<GrabbableObject>();
-                foreach (GrabbableObject grabbable in grabbableObjects)
+                NetworkObject networkObject;
+                if (spawnedScrap[i].TryGet(out networkObject, null))
                 {
-                    ProcessGameObject(grabbable.gameObject);
+                    GrabbableObject component = networkObject.GetComponent<GrabbableObject>();
+                    if (component != null)
+                    {
+                        MeshService.RegenerateLODs(component, component.mainObjectRenderer ? component.mainObjectRenderer.transform : null);
+                    }
                 }
             }
         }
-    }
 
-    [HarmonyPatch]
-    class GrabbableObjectPatches
-    {
-        static IEnumerable<MethodBase> TargetMethods() => new[]
+        [HarmonyPatch(typeof(GrabbableObject))]
+        [HarmonyPatch("Start")]
+        [HarmonyPostfix]
+        [HarmonyPriority(Priority.Last)]
+        public static void GrabbableObject_Start(GrabbableObject __instance)
         {
-            AccessTools.Method(typeof(GrabbableObject), "Start"),
-        };
-
-        static void Postfix(ref GrabbableObject __instance)
-        {
-            MeshService.ProcessGameObject(__instance.gameObject, __instance.mainObjectRenderer ? __instance.mainObjectRenderer.transform : null);
+            MeshService.ProcessGrabbableObject(__instance);
         }
     }
 }

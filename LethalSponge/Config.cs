@@ -27,8 +27,11 @@ namespace Scoops
         public static ConfigEntry<float> LOD2Quality;
         public static ConfigEntry<float> cullStart;
         public static ConfigEntry<bool> fixComplexMeshes;
+        public static ConfigEntry<bool> fixComplexGrabbable;
+        public static ConfigEntry<bool> fixComplexCosmetics;
         public static ConfigEntry<float> complexMeshVertCutoff;
         public static ConfigEntry<string> fixComplexMeshesBlacklist;
+        public static ConfigEntry<string> fixComplexMeshesGameObjectBlacklist;
         public static ConfigEntry<bool> preserveSurfaceCurvature;
 
         public static ConfigEntry<bool> resizeTextures;
@@ -66,6 +69,7 @@ namespace Scoops
         public static ConfigEntry<bool> disableReflections;
         public static ConfigEntry<bool> disableMotionVectors;
         public static ConfigEntry<bool> disableRefraction;
+        public static ConfigEntry<int> vSyncCount;
 
         public static ConfigEntry<bool> qualityOverrides;
         public static ConfigEntry<int> decalDrawDist;
@@ -214,6 +218,18 @@ namespace Scoops
                     true,
                     "Should Sponge reduce vertex counts of overly complex meshes? (Will increase load times and memory usage slightly)"
             );
+            fixComplexGrabbable = cfg.Bind(
+                    "Meshes",
+                    "fixComplexGrabbable",
+                    true,
+                    "Should fixComplexMeshes apply to scrap and tools?"
+            );
+            fixComplexCosmetics = cfg.Bind(
+                    "Meshes",
+                    "fixComplexCosmetics",
+                    true,
+                    "Should fixComplexMeshes apply to MoreCompany cosmetics?"
+            );
             complexMeshVertCutoff = cfg.Bind(
                     "Meshes",
                     "complexMeshVertCutoff",
@@ -225,6 +241,12 @@ namespace Scoops
                     "fixComplexMeshesBlacklist",
                     "",
                     "Mesh names in this semicolon-separated list will be ignored while fixing complex meshes."
+            );
+            fixComplexMeshesGameObjectBlacklist = cfg.Bind(
+                    "Meshes",
+                    "fixComplexMeshesGameObjectBlacklist",
+                    "",
+                    "GameObject names in this semicolon-separated list will be ignored while fixing complex meshes."
             );
             preserveSurfaceCurvature = cfg.Bind(
                     "Meshes",
@@ -432,6 +454,12 @@ namespace Scoops
                 "disableReflections",
                 false,
                 "Should Sponge disable Refraction on the player camera?"
+            );
+            vSyncCount = cfg.Bind(
+                "Rendering",
+                "vSyncCount",
+                1,
+                "When the option \"Use monitor (V-Sync)\" is selected in Options, what VSyncCount should be used? (LC default is 1)"
             );
 
             // Graphics Quality
