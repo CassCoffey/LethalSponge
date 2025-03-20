@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Scoops.service;
+using LethalLevelLoader;
 
 namespace UnityMeshSimplifier
 {
@@ -179,30 +180,34 @@ namespace UnityMeshSimplifier
 
             int totalVertexCount = 0;
             int totalSubMeshCount = 0;
+
+            // Removed many of the exceptions, decided to just skip the meshes in question.
             for (int meshIndex = 0; meshIndex < meshes.Length; meshIndex++)
             {
                 var mesh = meshes[meshIndex];
                 if (mesh == null)
-                    throw new System.ArgumentException(string.Format("The mesh at index {0} is null.", meshIndex), nameof(meshes));
+                    continue;
+                    //throw new System.ArgumentException(string.Format("The mesh at index {0} is null.", meshIndex), nameof(meshes));
                 else if (!CanReadMesh(mesh))
-                    throw new System.ArgumentException(string.Format("The mesh at index {0} is not readable.", meshIndex), nameof(meshes));
-
-                totalVertexCount += mesh.vertexCount;
-                totalSubMeshCount += mesh.subMeshCount;
+                    continue;
+                    //throw new System.ArgumentException(string.Format("The mesh at index {0} is not readable.", meshIndex), nameof(meshes));
 
                 // Validate the mesh materials
                 var meshMaterials = materials[meshIndex];
                 if (meshMaterials == null)
-                    throw new System.ArgumentException(string.Format("The materials for mesh at index {0} is null.", meshIndex), nameof(materials));
+                    continue;
+                    //throw new System.ArgumentException(string.Format("The materials for mesh at index {0} is null.", meshIndex), nameof(materials));
                 else if (meshMaterials.Length != mesh.subMeshCount)
-                    throw new System.ArgumentException(
-                        string.Format("The materials for mesh at index {0} doesn't match the submesh count ({1} != {2}).",
-                            meshIndex, meshMaterials.Length, mesh.subMeshCount), nameof(materials));
+                    continue;
+                    //throw new System.ArgumentException(
+                    //    string.Format("The materials for mesh at index {0} doesn't match the submesh count ({1} != {2}).",
+                    //        meshIndex, meshMaterials.Length, mesh.subMeshCount), nameof(materials));
 
                 for (int materialIndex = 0; materialIndex < meshMaterials.Length; materialIndex++)
                 {
                     if (meshMaterials[materialIndex] == null)
-                        throw new System.ArgumentException(string.Format("The material at index {0} for mesh at index {1} is null.", materialIndex, meshIndex), nameof(materials));
+                        continue;
+                        //throw new System.ArgumentException(string.Format("The material at index {0} for mesh at index {1} is null.", materialIndex, meshIndex), nameof(materials));
                 }
 
                 // Validate the mesh bones
@@ -210,14 +215,19 @@ namespace UnityMeshSimplifier
                 {
                     var meshBones = bones[meshIndex];
                     if (meshBones == null)
-                        throw new System.ArgumentException(string.Format("The bones for mesh at index {0} is null.", meshIndex), nameof(meshBones));
+                        continue;
+                        //throw new System.ArgumentException(string.Format("The bones for mesh at index {0} is null.", meshIndex), nameof(meshBones));
 
                     for (int boneIndex = 0; boneIndex < meshBones.Length; boneIndex++)
                     {
                         if (meshBones[boneIndex] == null)
-                            throw new System.ArgumentException(string.Format("The bone at index {0} for mesh at index {1} is null.", boneIndex, meshIndex), nameof(meshBones));
+                            continue;
+                            //throw new System.ArgumentException(string.Format("The bone at index {0} for mesh at index {1} is null.", boneIndex, meshIndex), nameof(meshBones));
                     }
                 }
+
+                totalVertexCount += mesh.vertexCount;
+                totalSubMeshCount += mesh.subMeshCount;
             }
 
             var combinedVertices = new List<Vector3>(totalVertexCount);
