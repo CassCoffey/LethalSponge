@@ -20,11 +20,8 @@ namespace Scoops
         public static ConfigEntry<bool> generateLODs;
         public static ConfigEntry<string> generateLODsBlacklist;
         public static ConfigEntry<bool> generateLODMeshes;
-        public static ConfigEntry<bool> useLOD2;
         public static ConfigEntry<float> LOD1Start;
-        public static ConfigEntry<float> LOD2Start;
         public static ConfigEntry<float> LOD1Quality;
-        public static ConfigEntry<float> LOD2Quality;
         public static ConfigEntry<float> cullStart;
         public static ConfigEntry<bool> fixComplexMeshes;
         public static ConfigEntry<bool> fixComplexGrabbable;
@@ -176,12 +173,6 @@ namespace Scoops
                     false,
                     "Should LOD levels use simplified meshes? (This will increase load times/memory usage for a slight fps boost in some cases, not generally recommended)"
             );
-            useLOD2 = cfg.Bind(
-                    "Meshes",
-                    "useLOD2",
-                    false,
-                    "Should Sponge generate a second LOD level so meshes go from Full Detail -> LOD1 -> LOD2 -> Culled? (Will increase load times and memory usage more)"
-            );
             LOD1Start = cfg.Bind(
                     "Meshes",
                     "LOD1Start",
@@ -193,18 +184,6 @@ namespace Scoops
                     "LOD1Quality",
                     0.65f,
                     new ConfigDescription("What quality level the first LOD be? (requires generateLODs = true and generateLODMeshes = true)", new AcceptableValueRange<float>(0f, 1f))
-            );
-            LOD2Start = cfg.Bind(
-                    "Meshes",
-                    "LOD2Start",
-                    0.08f,
-                    new ConfigDescription("Where should the second LOD start? (Measured in mesh size on screen) (requires generateLODs = true and useLOD2 = true)", new AcceptableValueRange<float>(0f, 1f))
-            );
-            LOD2Quality = cfg.Bind(
-                    "Meshes",
-                    "LOD2Quality",
-                    0.15f,
-                    new ConfigDescription("What quality level the second LOD be? (requires generateLODs = true, generateLODMeshes = true, and useLOD2 = true)", new AcceptableValueRange<float>(0f, 1f))
             );
             cullStart = cfg.Bind(
                     "Meshes",

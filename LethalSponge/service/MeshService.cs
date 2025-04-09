@@ -116,46 +116,7 @@ namespace Scoops.service
                 UVComponentCount = 2
             };
 
-            if (Config.useLOD2.Value)
-            {
-                levels = new LODLevel[]
-                {
-                    new LODLevel(Config.LOD1Start.Value, 1f)
-                    {
-                        CombineMeshes = false,
-                        CombineSubMeshes = false,
-                        SkinQuality = SkinQuality.Auto,
-                        ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On,
-                        ReceiveShadows = true,
-                        SkinnedMotionVectors = true,
-                        LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
-                        ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.BlendProbes,
-                    },
-                    new LODLevel(Config.LOD2Start.Value, Config.LOD1Quality.Value)
-                    {
-                        CombineMeshes = true,
-                        CombineSubMeshes = false,
-                        SkinQuality = SkinQuality.Auto,
-                        ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On,
-                        ReceiveShadows = true,
-                        SkinnedMotionVectors = true,
-                        LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
-                        ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Simple,
-                    },
-                    new LODLevel(Config.cullStart.Value, Config.LOD2Quality.Value)
-                    {
-                        CombineMeshes = true,
-                        CombineSubMeshes = true,
-                        SkinQuality = SkinQuality.Bone2,
-                        ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off,
-                        ReceiveShadows = false,
-                        SkinnedMotionVectors = false,
-                        LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off,
-                        ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off,
-                    }
-                };
-            }
-            else
+            if (Config.generateLODMeshes.Value)
             {
                 levels = new LODLevel[]
                 {
@@ -180,6 +141,23 @@ namespace Scoops.service
                         SkinnedMotionVectors = true,
                         LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
                         ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Simple,
+                    }
+                };
+            }
+            else
+            {
+                levels = new LODLevel[]
+                {
+                    new LODLevel(Config.cullStart.Value, 1f)
+                    {
+                        CombineMeshes = false,
+                        CombineSubMeshes = false,
+                        SkinQuality = SkinQuality.Auto,
+                        ShadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On,
+                        ReceiveShadows = true,
+                        SkinnedMotionVectors = true,
+                        LightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes,
+                        ReflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.BlendProbes,
                     }
                 };
             }

@@ -19,7 +19,7 @@ public static class PluginInformation
 {
     public const string PLUGIN_GUID = "LethalSponge";
     public const string PLUGIN_NAME = "LethalSponge";
-    public const string PLUGIN_VERSION = "1.1.8";
+    public const string PLUGIN_VERSION = "1.1.9";
 }
 
 [BepInPlugin(PluginInformation.PLUGIN_GUID, PluginInformation.PLUGIN_NAME, PluginInformation.PLUGIN_VERSION)]
@@ -238,7 +238,6 @@ public class Plugin : BaseUnityPlugin
             settings.decalSettings.atlasWidth = Scoops.Config.decalAtlasSize.Value;
         }
 
-        //settings.lightLoopSettings.maxLocalVolumetricFogOnScreen = Scoops.Config.maxVolumetricFog.Value;
         if (Scoops.Config.reflectionAtlasSize.Value != "Resolution16384x8192")
         {
             settings.lightLoopSettings.reflectionProbeTexCacheSize = Enum.Parse<ReflectionProbeTextureCacheResolution>(Scoops.Config.reflectionAtlasSize.Value);
@@ -251,10 +250,6 @@ public class Plugin : BaseUnityPlugin
         {
             settings.lightLoopSettings.maxPlanarReflectionOnScreen = Scoops.Config.maxPlanarReflectionProbes.Value;
         }
-        // disabled until I have a distance based light culling system
-        //settings.lightLoopSettings.maxDirectionalLightsOnScreen = Scoops.Config.maxDirectionalLights.Value;
-        //settings.lightLoopSettings.maxPunctualLightsOnScreen = Scoops.Config.maxPunctualLights.Value;
-        //settings.lightLoopSettings.maxAreaLightsOnScreen = Scoops.Config.maxAreaLights.Value;
 
         if (Scoops.Config.shadowsMaxResolution.Value != 2048)
         {
