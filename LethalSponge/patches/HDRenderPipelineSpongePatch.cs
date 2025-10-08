@@ -16,6 +16,8 @@ namespace Scoops.patches
         static readonly List<CodeInstruction> instructionsToInsert = new List<CodeInstruction>() {
             // IL_06BF: ldarg.0
             new CodeInstruction(OpCodes.Ldarg_0),
+            // IL_06BF: ldarg.0
+            new CodeInstruction(OpCodes.Ldarg_0),
             // IL_06C0: ldfld  class [Unity.RenderPipelines.Core.Runtime]UnityEngine.Experimental.Rendering.RenderGraphModule.RenderGraph UnityEngine.Rendering.HighDefinition.HDRenderPipeline::m_RenderGraph
             new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(HDRenderPipeline), nameof(HDRenderPipeline.m_RenderGraph))),
             // IL_06C5: ldloc.1
@@ -38,8 +40,6 @@ namespace Scoops.patches
             CodeInstruction.Call(typeof(HDRenderPipeline), nameof(HDRenderPipeline.RenderCustomPass)),
             // IL_06D5: pop
             new CodeInstruction(OpCodes.Pop),
-            // IL_06BE: ldarg.0
-            new CodeInstruction(OpCodes.Ldarg_0),
         };
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -49,7 +49,7 @@ namespace Scoops.patches
             int insertionIndex = -1;
             for (int i = 0; i < code.Count - 1; i++) // -1 since we will be checking i + 1
             {
-                if (code[i].opcode == OpCodes.Call && code[i].Calls(AccessTools.Method(typeof(HDRenderPipeline), nameof(HDRenderPipeline.RenderSubsurfaceScattering))) && code[i + 1].opcode == OpCodes.Ldarg_0)
+                if (code[i].opcode == OpCodes.Ldloca_S && code[i + 1].opcode == OpCodes.Call && code[i + 1].Calls(AccessTools.Method(typeof(HDRenderPipeline), nameof(HDRenderPipeline.RenderSubsurfaceScattering))))
                 {
                     insertionIndex = i + 2;
                     break;
@@ -59,6 +59,10 @@ namespace Scoops.patches
             if (insertionIndex != -1)
             {
                 code.InsertRange(insertionIndex, instructionsToInsert);
+            }
+            else
+            {
+                Plugin.Log.LogWarning("Did not find HDRP Transpiler target.");
             }
 
             return code;
