@@ -19,7 +19,7 @@ namespace Scoops.rendering
         {
             if (!Config.useLegacyCustomShader.Value)
             {
-                posterizationShader = (Shader)Plugin.SpongeAssets.LoadAsset("SpongePosterize");
+                posterizationShader = (Shader)Plugin.SpongeAssets.LoadAsset("SpongePosterizeNew");
 
                 posterizationRT = RTHandles.Alloc(
                     Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
@@ -44,6 +44,13 @@ namespace Scoops.rendering
         public override void Execute(CustomPassContext ctx) 
         {
             ctx.propertyBlock.SetTexture("_SpongeCameraColorBuffer", ctx.cameraColorBuffer, RenderTextureSubElement.Color);
+            ctx.propertyBlock.SetFloat("_OutlineThickness", 0.001f);
+            ctx.propertyBlock.SetFloat("_DepthThreshold", 0.4f);
+            ctx.propertyBlock.SetFloat("_DepthCurve", 0.4f);
+            ctx.propertyBlock.SetFloat("_DepthStrength", 6f);
+            ctx.propertyBlock.SetFloat("_ColorThreshold", 0.47f);
+            ctx.propertyBlock.SetFloat("_ColorCurve", 2.94f);
+            ctx.propertyBlock.SetFloat("_ColorStrength", 0.65f);
 
             CoreUtils.SetRenderTarget(ctx.cmd, posterizationRT, ClearFlag.All);
             CoreUtils.DrawFullScreen(ctx.cmd, posterizationMaterial, ctx.propertyBlock, posterizationMaterial.FindPass("ReadColor"));
