@@ -106,8 +106,15 @@ namespace Scoops.service
                 newVolume.transform.parent = oldVolume.transform.parent;
                 newVolume.AddComponent<CustomPassVolume>();
 
-                // here we use the new injection point added by the transpiler
-                newVolume.GetComponent<CustomPassVolume>().injectionPoint = (CustomPassInjectionPoint)7;
+                if (!Config.useLegacyCustomShader.Value)
+                {
+                    newVolume.GetComponent<CustomPassVolume>().injectionPoint = CustomPassInjectionPoint.BeforeTransparent;
+                } 
+                else
+                {
+                    // here we use the new injection point added by the transpiler
+                    newVolume.GetComponent<CustomPassVolume>().injectionPoint = (CustomPassInjectionPoint)7;
+                }
 
                 newPass = new SpongeCustomPass();
                 newVolume.GetComponent<CustomPassVolume>().customPasses.Add(newPass);
@@ -125,7 +132,7 @@ namespace Scoops.service
             }
         }
 
-        public static void TogglePasses()
+        public static bool TogglePasses()
         {
             if (newPass != null && oldPass != null)
             {
@@ -144,7 +151,9 @@ namespace Scoops.service
                         LightService.SetLightIntensity(false);
                     }
                 }
+                return newPass.enabled;
             }
+            return false;
         }
 
         public static void ApplyCameraFixes()

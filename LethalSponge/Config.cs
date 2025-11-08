@@ -383,7 +383,7 @@ namespace Scoops
             volumetricCompensation = cfg.Bind(
                 "Rendering",
                 "volumetricCompensation",
-                true,
+                false,
                 "Should Sponge adjust all of the lights/fog to be more intense to make up for the changes in the custom shader? (Requires useCustomShader or useWIPCustomShader = true)"
             );
             compensationMoonBlacklist = cfg.Bind(

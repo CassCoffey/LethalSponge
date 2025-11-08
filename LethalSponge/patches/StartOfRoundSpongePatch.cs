@@ -117,8 +117,8 @@ namespace Scoops.patches
             {
                 if (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value)
                 {
-                    __instance.AddChatMessage("Toggling Sponge custom shader.");
-                    CameraService.TogglePasses();
+                    bool passEnabled = CameraService.TogglePasses();
+                    __instance.AddChatMessage((passEnabled ? "Enabling" : "Disabling") + " Sponge custom shader.");
                     return false;
                 }
             }

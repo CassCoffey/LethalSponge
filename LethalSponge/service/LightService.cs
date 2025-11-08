@@ -116,7 +116,7 @@ namespace Scoops.service
                 }
             }
 
-            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value))
+            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value && Config.useLegacyCustomShader.Value))
             {
                 Light[] lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 foreach (Light light in lights)
@@ -180,7 +180,7 @@ namespace Scoops.service
         [HarmonyPostfix]
         public static void PlayerControllerB_KillPlayer(ref PlayerControllerB __instance)
         {
-            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value))
+            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value && Config.useLegacyCustomShader.Value))
             {
                 if ((!__instance.IsOwner || !__instance.isPlayerControlled || (__instance.IsServer && !__instance.isHostPlayerObject)) && !__instance.isTestingPlayer)
                 {
@@ -196,7 +196,7 @@ namespace Scoops.service
         [HarmonyPostfix]
         public static void PlayerControllerB_SpectateNextPlayer(ref PlayerControllerB __instance)
         {
-            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value))
+            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value && Config.useLegacyCustomShader.Value))
             {
                 if ((!__instance.IsOwner || !__instance.isPlayerControlled || (__instance.IsServer && !__instance.isHostPlayerObject)) && !__instance.isTestingPlayer)
                 {
@@ -212,7 +212,7 @@ namespace Scoops.service
         [HarmonyPostfix]
         public static void StartOfRound_EndOfGameClientRpc(ref StartOfRound __instance)
         {
-            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value))
+            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value && Config.useLegacyCustomShader.Value))
             {
                 planetName = null;
                 SetLightIntensity(true);
@@ -233,7 +233,7 @@ namespace Scoops.service
 
         static void Postfix()
         {
-            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value))
+            if (Config.volumetricCompensation.Value && (Config.useCustomShader.Value && Config.useLegacyCustomShader.Value))
             {
                 LightService.CheckCompensationStatus(GameNetworkManager.Instance.localPlayerController);
             }

@@ -29,11 +29,11 @@ namespace Scoops.rendering
             }
             else
             {
-                posterizationShader = (Shader)Plugin.SpongeAssets.LoadAsset("SpongePosterizeLegacy");
+                posterizationShader = (Shader)Plugin.SpongeAssets.LoadAsset("SpongePosterize");
 
                 posterizationRT = RTHandles.Alloc(
                     Vector2.one, TextureXR.slices, dimension: TextureXR.dimension,
-                    colorFormat: GraphicsFormat.R8G8B8A8_SRGB,
+                    colorFormat: GraphicsFormat.B10G11R11_UFloatPack32,
                     useDynamicScale: true, name: "Posterization Buffer"
                 );
             }
@@ -43,7 +43,10 @@ namespace Scoops.rendering
 
         public override void Execute(CustomPassContext ctx) 
         {
-            ctx.propertyBlock.SetTexture("_SpongeCameraColorBuffer", ctx.cameraColorBuffer, RenderTextureSubElement.Color);
+            if (Config.useLegacyCustomShader.Value)
+            {
+                ctx.propertyBlock.SetTexture("_SpongeCameraColorBuffer", ctx.cameraColorBuffer, RenderTextureSubElement.Color);
+            }
             ctx.propertyBlock.SetFloat("_OutlineThickness", 0.001f);
             ctx.propertyBlock.SetFloat("_DepthThreshold", 0.4f);
             ctx.propertyBlock.SetFloat("_DepthCurve", 0.4f);

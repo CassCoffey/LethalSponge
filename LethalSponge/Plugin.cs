@@ -19,7 +19,7 @@ public static class PluginInformation
 {
     public const string PLUGIN_GUID = "LethalSponge";
     public const string PLUGIN_NAME = "LethalSponge";
-    public const string PLUGIN_VERSION = "1.2.0";
+    public const string PLUGIN_VERSION = "1.3.0";
 }
 
 [BepInPlugin(PluginInformation.PLUGIN_GUID, PluginInformation.PLUGIN_NAME, PluginInformation.PLUGIN_VERSION)]
@@ -132,7 +132,7 @@ public class Plugin : BaseUnityPlugin
             _harmony.PatchAll(typeof(PlayerControllerBSpongePatch));
         }
 
-        if (Scoops.Config.useCustomShader.Value || Scoops.Config.useLegacyCustomShader.Value)
+        if (Scoops.Config.useCustomShader.Value && Scoops.Config.useLegacyCustomShader.Value)
         {
             _harmony.PatchAll(typeof(HDRenderPipeline_RecordRenderGraph_Patch));
             if (Scoops.Config.volumetricCompensation.Value)
