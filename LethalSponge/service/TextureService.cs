@@ -106,7 +106,7 @@ namespace Scoops.service
                         //    }
                         //}
 
-                        if (Config.resizeTextures.Value && (temp.height > Config.maxTextureSize.Value || temp.width > Config.maxTextureSize.Value))
+                        if (Config.resizeTextures.Value && (temp.height > Config.maxResizeTextureSize.Value || temp.width > Config.maxResizeTextureSize.Value))
                         {
                             try
                             {
@@ -183,7 +183,7 @@ namespace Scoops.service
         {
             float largerDimension = texture.height > texture.width ? texture.height : texture.width;
 
-            float scale = (float)Config.maxTextureSize.Value / largerDimension;
+            float scale = (float)Config.maxResizeTextureSize.Value / largerDimension;
 
             int width = Mathf.RoundToInt(texture.width * scale);
             int height = Mathf.RoundToInt(texture.height * scale);
@@ -191,17 +191,19 @@ namespace Scoops.service
             if (width == 0) width = 1;
             if (height == 0) height = 1;
 
-            GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB;
+            GraphicsFormat format = GraphicsFormatUtility.GetGraphicsFormat(TextureFormat.RGBA32, texture.isDataSRGB);
+            RenderTextureFormat rtFormat = GraphicsFormatUtility.GetRenderTextureFormat(format);
+            TextureFormat texFormat = GraphicsFormatUtility.GetTextureFormat(format);
 
-            RenderTexture rt = RenderTexture.GetTemporary(width, height, 0, format);
-
+            RenderTexture rt = RenderTexture.GetTemporary(width, height, 0, rtFormat);
+            
             Graphics.Blit(texture, rt);
-
+            
             RenderTexture.active = rt;
-            Texture2D result = new Texture2D(width, height, format, TextureCreationFlags.None);
+            Texture2D result = new Texture2D(width, height, texFormat, true);
             result.name = texture.name;
             result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-            result.Apply(false, true);
+            result.Apply(true, true);
             RenderTexture.ReleaseTemporary(rt);
 
             return result;

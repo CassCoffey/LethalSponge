@@ -1,4 +1,7 @@
 ﻿using BepInEx.Configuration;
+using HarmonyLib;
+using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine.Rendering.HighDefinition;
 
 namespace Scoops
@@ -32,7 +35,7 @@ namespace Scoops
         public static ConfigEntry<bool> preserveSurfaceCurvature;
 
         public static ConfigEntry<bool> resizeTextures;
-        public static ConfigEntry<int> maxTextureSize;
+        public static ConfigEntry<int> maxResizeTextureSize;
 
         public static ConfigEntry<bool> deDupeMeshes;
         public static ConfigEntry<string> deDupeMeshBlacklist;
@@ -90,6 +93,8 @@ namespace Scoops
 
         public Config(ConfigFile cfg)
         {
+            cfg.SaveOnConfigSet = false;
+
             // Investigation
             minimalLogging = cfg.Bind(
                     "Investigation",
@@ -241,10 +246,10 @@ namespace Scoops
                     true,
                     "Should Sponge automatically resize textures to fit the maxTextureSize? (Will slightly increase load times and decrease VRAM usage)"
             );
-            maxTextureSize = cfg.Bind(
+            maxResizeTextureSize = cfg.Bind(
                     "Textures",
-                    "maxTextureSize",
-                    1024,
+                    "maxResizeTextureSize",
+                    2048,
                     new ConfigDescription("All textures with height over this number will be resized down to this number.", new AcceptableValueList<int>(64, 128, 256, 512, 1024, 2048))
             );
 
@@ -552,6 +557,21 @@ namespace Scoops
                     true,
                     "If false, Sponge will no longer run automatically each day and will only run when you type '/sponge' in chat. This can be toggled mid-game with '/sponge toggle'."
             );
+
+            ClearOrphanedEntries(cfg);
+            cfg.Save();
+            cfg.SaveOnConfigSet = true;
+        }
+
+        // Thanks modding wiki
+        static void ClearOrphanedEntries(ConfigFile cfg)
+        {
+            // Find the private property `OrphanedEntries` from the type `ConfigFile` //
+            PropertyInfo orphanedEntriesProp = AccessTools.Property(typeof(ConfigFile), "OrphanedEntries");
+            // And get the value of that property from our ConfigFile instance //
+            var orphanedEntries = (Dictionary<ConfigDefinition, string>)orphanedEntriesProp.GetValue(cfg);
+            // And finally, clear the `OrphanedEntries` dictionary //
+            orphanedEntries.Clear();
         }
     }
 }
