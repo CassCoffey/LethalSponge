@@ -200,7 +200,7 @@ namespace Scoops.service
 
         public static void ApplyPlayerCameraPatch(PlayerControllerB player)
         {
-            if (Config.disableBloom.Value || Config.disableDOF.Value || Config.disableMotionBlur.Value || Config.disableShadows.Value || Config.disableMotionVectors.Value || Config.disableRefraction.Value || Config.disableReflections.Value)
+            if (Config.disableBloom.Value || Config.disableDOF.Value || Config.disableMotionBlur.Value || Config.disableShadows.Value || Config.disableReflections.Value)
             {
                 SetPlayerOverrides(player.gameplayCamera);
             }
@@ -306,20 +306,9 @@ namespace Scoops.service
                 hdCameraData.DisableHDField(FrameSettingsField.TransparentSSR);
             }
 
-            if (Config.disableMotionVectors.Value)
-            {
-                hdCameraData.DisableHDField(FrameSettingsField.MotionVectors);
-                hdCameraData.DisableHDField(FrameSettingsField.ObjectMotionVectors);
-                hdCameraData.DisableHDField(FrameSettingsField.TransparentsWriteMotionVector);
-            }
-
-            if (Config.disableRefraction.Value)
-            {
-                hdCameraData.DisableHDField(FrameSettingsField.Refraction);
-            }
-
             // Keeping these here as reference
 
+            //hdCameraData.DisableHDField(FrameSettingsField.Refraction);
             //hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.MSAAMode] = true;
             //hdCameraData.renderingPathCustomFrameSettings.msaaMode = MSAAMode.None;
             //hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.MaterialQualityLevel] = true;
@@ -351,6 +340,9 @@ namespace Scoops.service
             //hdCameraData.DisableHDField(FrameSettingsField.Transmission);
             //hdCameraData.DisableHDField(FrameSettingsField.SubsurfaceScattering);
             //hdCameraData.DisableHDField(FrameSettingsField.VolumetricClouds);
+            //hdCameraData.DisableHDField(FrameSettingsField.MotionVectors);
+            //hdCameraData.DisableHDField(FrameSettingsField.ObjectMotionVectors);
+            //hdCameraData.DisableHDField(FrameSettingsField.TransparentsWriteMotionVector);
         }
 
         private static void DisableHDField(this HDAdditionalCameraData data, FrameSettingsField field)

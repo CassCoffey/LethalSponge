@@ -67,8 +67,6 @@ namespace Scoops
         public static ConfigEntry<bool> disableBloom;
         public static ConfigEntry<bool> disableShadows;
         public static ConfigEntry<bool> disableReflections;
-        public static ConfigEntry<bool> disableMotionVectors;
-        public static ConfigEntry<bool> disableRefraction;
         public static ConfigEntry<int> vSyncCount;
 
         public static ConfigEntry<bool> qualityOverrides;
@@ -426,18 +424,6 @@ namespace Scoops
                 "disableReflections",
                 false,
                 "Should Sponge disable Reflections on the player camera?"
-            );
-            disableMotionVectors = cfg.Bind(
-                "Rendering",
-                "disableReflections",
-                false,
-                "Should Sponge disable MotionVectors on the player camera?"
-            );
-            disableRefraction = cfg.Bind(
-                "Rendering",
-                "disableReflections",
-                false,
-                "Should Sponge disable Refraction on the player camera?"
             );
             vSyncCount = cfg.Bind(
                 "Rendering",
