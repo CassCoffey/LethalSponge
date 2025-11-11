@@ -71,6 +71,7 @@ namespace Scoops.service
         public static List<Texture2D> dupedTextures = new List<Texture2D>();
 
         public static string[] deDupeBlacklist;
+        public static string[] resizeBlacklist;
 
         public static void ResizeAllTextures()
         {
@@ -106,7 +107,7 @@ namespace Scoops.service
                         //    }
                         //}
 
-                        if (Config.resizeTextures.Value && (temp.height > Config.maxResizeTextureSize.Value || temp.width > Config.maxResizeTextureSize.Value))
+                        if (Config.resizeTextures.Value && (temp.height > Config.maxResizeTextureSize.Value || temp.width > Config.maxResizeTextureSize.Value) && !resizeBlacklist.Contains(textureInfo.name.ToLower()))
                         {
                             try
                             {

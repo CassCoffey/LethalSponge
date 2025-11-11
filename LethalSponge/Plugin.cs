@@ -19,7 +19,7 @@ public static class PluginInformation
 {
     public const string PLUGIN_GUID = "LethalSponge";
     public const string PLUGIN_NAME = "LethalSponge";
-    public const string PLUGIN_VERSION = "1.3.3";
+    public const string PLUGIN_VERSION = "1.3.4";
 }
 
 [BepInPlugin(PluginInformation.PLUGIN_GUID, PluginInformation.PLUGIN_NAME, PluginInformation.PLUGIN_VERSION)]
@@ -182,6 +182,7 @@ public class Plugin : BaseUnityPlugin
         if (Scoops.Config.deDupeTextures.Value || Scoops.Config.resizeTextures.Value)
         {
             TextureService.deDupeBlacklist = Scoops.Config.deDupeTextureBlacklist.Value.ToLower().Split(';');
+            TextureService.resizeBlacklist = Scoops.Config.resizeTextureBlacklist.Value.ToLower().Split(';');
             TextureService.ResizeAllTextures();
             deduped = true;
         }

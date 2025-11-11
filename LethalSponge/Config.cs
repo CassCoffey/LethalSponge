@@ -36,6 +36,7 @@ namespace Scoops
 
         public static ConfigEntry<bool> resizeTextures;
         public static ConfigEntry<int> maxResizeTextureSize;
+        public static ConfigEntry<string> resizeTextureBlacklist;
 
         public static ConfigEntry<bool> deDupeMeshes;
         public static ConfigEntry<string> deDupeMeshBlacklist;
@@ -249,6 +250,12 @@ namespace Scoops
                     "maxResizeTextureSize",
                     2048,
                     new ConfigDescription("All textures with height over this number will be resized down to this number.", new AcceptableValueList<int>(64, 128, 256, 512, 1024, 2048))
+            );
+            resizeTextureBlacklist = cfg.Bind(
+                    "Textures",
+                    "resizeTextureBlacklist",
+                    "",
+                    "Texture names in this semicolon-separated list will be exempt from resizing."
             );
 
             // Dedupe
