@@ -141,22 +141,30 @@ namespace Scoops.service
                         {
                             if (materialShader.GetPropertyType(i) == UnityEngine.Rendering.ShaderPropertyType.Texture)
                             {
-                                Texture texture = material.GetTexture(materialShader.GetPropertyName(i));
-                                if (texture != null && texture is Texture2D)
+                                try
                                 {
-                                    TextureInfo textureInfo = new TextureInfo((Texture2D)texture);
-                                    if (TextureDict.TryGetValue(textureInfo, out Texture2D processedTex))
+                                    Texture texture = material.GetTexture(materialShader.GetPropertyName(i));
+                                    if (texture != null && texture is Texture2D)
                                     {
-                                        if (processedTex.GetInstanceID() == texture.GetInstanceID())
+                                        TextureInfo textureInfo = new TextureInfo((Texture2D)texture);
+                                        if (TextureDict.TryGetValue(textureInfo, out Texture2D processedTex))
                                         {
-                                            // Already processed
-                                        }
-                                        else
-                                        {
-                                            material.SetTexture(materialShader.GetPropertyName(i), processedTex);
-                                            dupedTextures.Add((Texture2D)texture);
+                                            if (processedTex.GetInstanceID() == texture.GetInstanceID())
+                                            {
+                                                // Already processed
+                                            }
+                                            else
+                                            {
+                                                material.SetTexture(materialShader.GetPropertyName(i), processedTex);
+                                                dupedTextures.Add((Texture2D)texture);
+                                            }
                                         }
                                     }
+                                }
+                                catch (Exception e)
+                                {
+                                    Plugin.Log.LogWarning("Error while applying resized/deduped Texture to property " + materialShader.GetPropertyName(i) + " on material " + material.name + ", continuing:");
+                                    Plugin.Log.LogWarning(e);
                                 }
                             }
                         }
