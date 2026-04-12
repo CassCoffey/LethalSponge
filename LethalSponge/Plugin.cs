@@ -10,8 +10,6 @@ using UnityEngine;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Rendering;
 using System;
-using UnityEngine.SceneManagement;
-using System.IO;
 
 namespace Scoops;
 
@@ -19,19 +17,18 @@ public static class PluginInformation
 {
     public const string PLUGIN_GUID = "LethalSponge";
     public const string PLUGIN_NAME = "LethalSponge";
-    public const string PLUGIN_VERSION = "1.3.5";
+    public const string PLUGIN_VERSION = "1.4.3";
 }
 
 [BepInPlugin(PluginInformation.PLUGIN_GUID, PluginInformation.PLUGIN_NAME, PluginInformation.PLUGIN_VERSION)]
 [BepInDependency("imabatby.lethallevelloader", BepInDependency.DependencyFlags.SoftDependency)]
 [BepInDependency("me.swipez.melonloader.morecompany", BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency("darmuh.TerminalStuff", BepInDependency.DependencyFlags.SoftDependency)]
 public class Plugin : BaseUnityPlugin
 {
     public static Plugin Instance { get; set; }
 
     public static Config SpongeConfig { get; internal set; }
-
-    public static AssetBundle SpongeAssets;
 
     public static ManualLogSource Log => Instance.Logger;
 
@@ -47,8 +44,6 @@ public class Plugin : BaseUnityPlugin
         Log.LogInfo("Loading LethalSponge Version " + PluginInformation.PLUGIN_VERSION);
 
         var dllFolderPath = System.IO.Path.GetDirectoryName(Info.Location);
-        var assetBundleFilePath = System.IO.Path.Combine(dllFolderPath, "spongeassets");
-        SpongeAssets = AssetBundle.LoadFromFile(assetBundleFilePath);
 
         SpongeConfig = new(base.Config);
 
@@ -127,19 +122,9 @@ public class Plugin : BaseUnityPlugin
             _harmony.PatchAll(typeof(ManualCameraRendererSpongePatch));
         }
 
-        if (Scoops.Config.disableBloom.Value || Scoops.Config.disableDOF.Value || Scoops.Config.disableMotionBlur.Value || Scoops.Config.disableShadows.Value  || Scoops.Config.disableReflections.Value || Scoops.Config.useCustomShader.Value || Scoops.Config.useLegacyCustomShader.Value)
+        if (Scoops.Config.disableBloom.Value || Scoops.Config.disableDOF.Value || Scoops.Config.disableMotionBlur.Value || Scoops.Config.disableShadows.Value  || Scoops.Config.disableReflections.Value)
         {
             _harmony.PatchAll(typeof(PlayerControllerBSpongePatch));
-        }
-
-        if (Scoops.Config.useCustomShader.Value && Scoops.Config.useLegacyCustomShader.Value)
-        {
-            _harmony.PatchAll(typeof(HDRenderPipeline_RecordRenderGraph_Patch));
-            if (Scoops.Config.volumetricCompensation.Value)
-            {
-                _harmony.PatchAll(typeof(LightService));
-                _harmony.PatchAll(typeof(TeleportPatches));
-            }
         }
 
         if (Scoops.Config.fixInputActions.Value)
@@ -186,14 +171,6 @@ public class Plugin : BaseUnityPlugin
             TextureService.ResizeAllTextures();
             deduped = true;
         }
-
-        // No shader de-duping until I can figure it out
-        //if (Scoops.Config.deDupeShaders.Value)
-        //{
-        //    ShaderService.deDupeBlacklist = Scoops.Config.deDupeShaderBlacklist.Value.ToLower().Split(';');
-        //    ShaderService.DedupeAllShaders();
-        //    deduped = true;
-        //}
 
         if (Scoops.Config.deDupeMeshes.Value)
         {
@@ -261,9 +238,9 @@ public class Plugin : BaseUnityPlugin
         if (Scoops.Config.shadowsAtlasSize.Value != 4096)
         {
             settings.hdShadowInitParams.punctualLightShadowAtlas.shadowAtlasResolution = Scoops.Config.shadowsAtlasSize.Value;
-            settings.hdShadowInitParams.cachedPunctualLightShadowAtlas = Scoops.Config.shadowsAtlasSize.Value / 2; // Just make it half size for now
+            settings.hdShadowInitParams.cachedPunctualLightShadowAtlas = Scoops.Config.shadowsAtlasSize.Value * 2; // Just make it double size for now
             settings.hdShadowInitParams.areaLightShadowAtlas.shadowAtlasResolution = Scoops.Config.shadowsAtlasSize.Value;
-            settings.hdShadowInitParams.cachedAreaLightShadowAtlas = Scoops.Config.shadowsAtlasSize.Value / 2;
+            settings.hdShadowInitParams.cachedAreaLightShadowAtlas = Scoops.Config.shadowsAtlasSize.Value * 2;
         }
         if (Scoops.Config.fogBudget.Value != 0.17f)
         {

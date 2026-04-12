@@ -58,11 +58,7 @@ namespace Scoops
         public static ConfigEntry<int> securityCameraFramerate;
         public static ConfigEntry<int> shipCameraFramerate;
 
-        public static ConfigEntry<bool> removePosterizationShader;
-        public static ConfigEntry<bool> useCustomShader;
-        public static ConfigEntry<bool> useLegacyCustomShader;
-        public static ConfigEntry<bool> volumetricCompensation;
-        public static ConfigEntry<string> compensationMoonBlacklist;
+        //public static ConfigEntry<bool> removePosterizationShader;
         public static ConfigEntry<bool> disableDOF;
         public static ConfigEntry<bool> disableMotionBlur;
         public static ConfigEntry<bool> disableBloom;
@@ -372,36 +368,13 @@ namespace Scoops
             );
 
             // Rendering
-            removePosterizationShader = cfg.Bind(
-                "Rendering",
-                "removePosterizationShader",
-                true,
-                "Should Sponge remove the expensive posterization + outline custom pass to save processing power?"
-            );
-            useCustomShader = cfg.Bind(
-                "Rendering",
-                "useCustomShader",
-                true,
-                "Should Sponge replace the removed shader with a faster one that looks similar? (Requires removePosterizationShader = true)"
-            );
-            useLegacyCustomShader = cfg.Bind(
-                "Rendering",
-                "useLegacyCustomShader",
-                false,
-                "Should Sponge replace the removed shader with the shader from the original sponge release? (Takes precedence over useCustomShader) (Requires removePosterizationShader = true)"
-            );
-            volumetricCompensation = cfg.Bind(
-                "Rendering",
-                "volumetricCompensation",
-                false,
-                "Should Sponge adjust all of the lights/fog to be more intense to make up for the changes in the custom shader? (Requires useCustomShader or useWIPCustomShader = true)"
-            );
-            compensationMoonBlacklist = cfg.Bind(
-                "Rendering",
-                "compensationMoonBlacklist",
-                "",
-                "Moons in this semicolon-separated list will have Volmetric Compensation disabled on the exterior of the moon. Use this if a modded moon is too foggy. (Requires volumetricCompensation = true)"
-            );
+            // Disabled until I can figure out what the new one is called.
+            //removePosterizationShader = cfg.Bind(
+            //    "Rendering",
+            //    "removePosterizationShader",
+            //    true,
+            //    "Should Sponge remove the posterization + outline custom pass?"
+            //);
             disableDOF = cfg.Bind(
                 "Rendering",
                 "disableDOF",

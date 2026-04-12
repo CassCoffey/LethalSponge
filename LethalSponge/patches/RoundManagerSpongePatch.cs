@@ -2,9 +2,6 @@
 using DunGen.Graph;
 using HarmonyLib;
 using Scoops.service;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Scoops.patches
 {
@@ -20,7 +17,7 @@ namespace Scoops.patches
                 SpongeService.DungeonLoaded(__instance.dungeonGenerator.Generator);
             }
 
-            if (Config.changeLightFadeDistance.Value || Config.volumetricCompensation.Value)
+            if (Config.changeLightFadeDistance.Value)
             {
                 LightService.UpdateAllLights();
             }

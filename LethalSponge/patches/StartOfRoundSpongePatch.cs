@@ -17,7 +17,7 @@ namespace Scoops.patches
         {
             SpongeService.Initialize();
 
-            if (Config.changeLightFadeDistance.Value || Config.volumetricCompensation.Value)
+            if (Config.changeLightFadeDistance.Value)
             {
                 LightService.UpdateAllLights();
             }
@@ -35,10 +35,10 @@ namespace Scoops.patches
                 }
             }
 
-            if (Config.removePosterizationShader.Value)
-            {
-                CameraService.DisablePosterization();
-            }
+            //if (Config.removePosterizationShader.Value)
+            //{
+            //    CameraService.DisablePosterization();
+            //}
 
             Plugin.ManageDeDuping();
         }
@@ -65,8 +65,7 @@ namespace Scoops.patches
                     "'/sponge clean': Run Sponge Cleanup only.\n" +
                     "'/sponge toggle': Toggle Sponge daily auto activate.\n" +
                     "'/sponge modelcheck': Ask Sponge for a readout of the meshes currently rendering.\n" +
-                    "'/sponge texturecheck': Ask Sponge for a readout of the textures currently rendering.\n" +
-                    ((Config.useCustomShader.Value || Config.useLegacyCustomShader.Value) ? "'/sponge shader': Toggle between Sponge custom shader and original LC shader.\n" : ""));
+                    "'/sponge texturecheck': Ask Sponge for a readout of the textures currently rendering.\n");
                 return false;
             }
 
@@ -111,16 +110,6 @@ namespace Scoops.patches
                 __instance.AddChatMessage("Running Sponge texture check.");
                 SpongeService.TextureCheck();
                 return false;
-            }
-
-            if (chatMessage.ToLower() == "/sponge shader")
-            {
-                if (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value)
-                {
-                    bool passEnabled = CameraService.TogglePasses();
-                    __instance.AddChatMessage((passEnabled ? "Enabling" : "Disabling") + " Sponge custom shader.");
-                    return false;
-                }
             }
 
             return true;

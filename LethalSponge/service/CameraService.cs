@@ -1,15 +1,7 @@
 ﻿using GameNetcodeStuff;
-using Scoops.rendering;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
 using UnityEngine;
-using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
-using UnityEngine.Windows.Speech;
 
 namespace Scoops.service
 {
@@ -99,27 +91,6 @@ namespace Scoops.service
         {
             oldVolume = GameObject.Find("CustomPass");
 
-            if (Config.useCustomShader.Value || Config.useLegacyCustomShader.Value)
-            {
-                // The old switcharoo
-                newVolume = new GameObject("SpongeCustomPass");
-                newVolume.transform.parent = oldVolume.transform.parent;
-                newVolume.AddComponent<CustomPassVolume>();
-
-                if (!Config.useLegacyCustomShader.Value)
-                {
-                    newVolume.GetComponent<CustomPassVolume>().injectionPoint = CustomPassInjectionPoint.BeforeTransparent;
-                } 
-                else
-                {
-                    // here we use the new injection point added by the transpiler
-                    newVolume.GetComponent<CustomPassVolume>().injectionPoint = (CustomPassInjectionPoint)7;
-                }
-
-                newPass = new SpongeCustomPass();
-                newVolume.GetComponent<CustomPassVolume>().customPasses.Add(newPass);
-            }
-
             // Lets do this less destructively.
             foreach (CustomPass pass in oldVolume.GetComponent<CustomPassVolume>().customPasses)
             {
@@ -130,30 +101,6 @@ namespace Scoops.service
                     break;
                 }
             }
-        }
-
-        public static bool TogglePasses()
-        {
-            if (newPass != null && oldPass != null)
-            {
-                oldPass.enabled = !oldPass.enabled;
-                newPass.enabled = !oldPass.enabled;
-                Plugin.Log.LogMessage((newPass.enabled ? "Enabling" : "Disabling") + " Sponge custom shader.");
-
-                if (Config.volumetricCompensation.Value)
-                {
-                    if (newPass.enabled)
-                    {
-                        LightService.CheckCompensationStatus(GameNetworkManager.Instance.localPlayerController);
-                    }
-                    else
-                    {
-                        LightService.SetLightIntensity(false);
-                    }
-                }
-                return newPass.enabled;
-            }
-            return false;
         }
 
         public static void ApplyCameraFixes()
@@ -305,44 +252,6 @@ namespace Scoops.service
                 hdCameraData.DisableHDField(FrameSettingsField.SSR);
                 hdCameraData.DisableHDField(FrameSettingsField.TransparentSSR);
             }
-
-            // Keeping these here as reference
-
-            //hdCameraData.DisableHDField(FrameSettingsField.Refraction);
-            //hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.MSAAMode] = true;
-            //hdCameraData.renderingPathCustomFrameSettings.msaaMode = MSAAMode.None;
-            //hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.MaterialQualityLevel] = true;
-            //hdCameraData.renderingPathCustomFrameSettings.materialQuality = MaterialQuality.Low;
-            //hdCameraData.DisableHDField(FrameSettingsField.Decals);
-            //hdCameraData.DisableHDField(FrameSettingsField.TransparentPrepass);
-            //hdCameraData.DisableHDField(FrameSettingsField.TransparentPostpass);
-            //hdCameraData.DisableHDField(FrameSettingsField.RayTracing);
-            //hdCameraData.DisableHDField(FrameSettingsField.Distortion);
-            //hdCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.Postprocess] = true;
-            //hdCameraData.DisableHDField(FrameSettingsField.CustomPostProcess);
-            //hdCameraData.DisableHDField(FrameSettingsField.CustomPass);
-            //hdCameraData.DisableHDField(FrameSettingsField.StopNaN);
-            //hdCameraData.DisableHDField(FrameSettingsField.PaniniProjection);
-            //hdCameraData.DisableHDField(FrameSettingsField.LensDistortion);
-            //hdCameraData.DisableHDField(FrameSettingsField.ChromaticAberration);
-            //hdCameraData.DisableHDField(FrameSettingsField.Vignette);
-            //hdCameraData.DisableHDField(FrameSettingsField.FilmGrain);
-            //hdCameraData.DisableHDField(FrameSettingsField.Dithering);
-            //hdCameraData.DisableHDField(FrameSettingsField.Antialiasing);
-            //hdCameraData.DisableHDField(FrameSettingsField.LensFlareDataDriven);
-            //hdCameraData.DisableHDField(FrameSettingsField.AfterPostprocess);
-            //hdCameraData.DisableHDField(FrameSettingsField.Volumetrics);
-            //hdCameraData.DisableHDField(FrameSettingsField.VirtualTexturing);
-            //hdCameraData.DisableHDField(FrameSettingsField.Water);
-            //hdCameraData.DisableHDField(FrameSettingsField.ProbeVolume);
-            //hdCameraData.DisableHDField(FrameSettingsField.SSGI);
-            //hdCameraData.DisableHDField(FrameSettingsField.SSAO);
-            //hdCameraData.DisableHDField(FrameSettingsField.Transmission);
-            //hdCameraData.DisableHDField(FrameSettingsField.SubsurfaceScattering);
-            //hdCameraData.DisableHDField(FrameSettingsField.VolumetricClouds);
-            //hdCameraData.DisableHDField(FrameSettingsField.MotionVectors);
-            //hdCameraData.DisableHDField(FrameSettingsField.ObjectMotionVectors);
-            //hdCameraData.DisableHDField(FrameSettingsField.TransparentsWriteMotionVector);
         }
 
         private static void DisableHDField(this HDAdditionalCameraData data, FrameSettingsField field)

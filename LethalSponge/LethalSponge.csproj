@@ -26,12 +26,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Content Include="assetBundles\spongeassets">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
         <PackageReference Include="BepInEx.Core" Version="5.*" />
         <PackageReference Include="BepInEx.PluginInfoProps" Version="1.*" />
@@ -42,6 +36,9 @@
     <ItemGroup>
       <Reference Include="Assembly-CSharp-firstpass">
         <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+      </Reference>
+      <Reference Include="DunGen">
+        <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\DunGen.dll</HintPath>
       </Reference>
       <Reference Publicize="True" Include="LethalLevelLoader">
         <HintPath>..\..\..\Stuff\Modding\Lethal Company\LLL\LethalLevelLoader.dll</HintPath>
@@ -84,7 +81,7 @@
     <!-- Move the plugin to the game's plugin directory and start the game to test it -->
     <Target Condition="'$(CI)' != 'true' And $(StartGame)" Name="StartGame" AfterTargets="PostBuildEvent">
         <PropertyGroup>
-          <PluginVersion>1.3.5</PluginVersion>
+          <PluginVersion>1.4.3</PluginVersion>
         </PropertyGroup>
         <!-- Create a temporary copy of the plugin in the target directory -->
         <!-- This is a workaround because if we copy it directly to the game's plugin directory, an error is thrown because the game is using the plugin -->
@@ -93,8 +90,6 @@
         <!-- The move command will overwrite the plugin if it already exists and no error will be thrown -->
         <!-- We can't move the original plugin because it is used by reference for Test project -->
         <Move SourceFiles="$(TargetDir)$(TargetFileName).tmp" DestinationFiles="$(PluginGameDir)$(RootNamespace)-$(ProjectName)-$(PluginVersion)\$(TargetFileName)" />
-        <!-- Move Asset Bundle Files as well -->
-        <Exec Command="move /y &quot;$(TargetDir)assetBundles\$(AssetBundleName)&quot; &quot;$(PluginGameDir)$(RootNamespace)-$(ProjectName)-$(PluginVersion)\&quot;" />
         <!-- Kill every instance of the game, ignore errors if none are running -->
         <Exec Command="taskkill /F /IM &quot;$(GameExe)&quot; /T 2&gt;nul 1&gt;nul || exit 0" />
         <!-- Start new instances of the game as many times as specified in NumberOfClients -->
