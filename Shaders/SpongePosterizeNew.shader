@@ -50,7 +50,7 @@ Shader "FullScreen/SpongePosterizeNew"
 
     float SobelOperator_Color(float2 coord, float thickness)
     {
-        float exposureValue = LOAD_TEXTURE2D_X(_ExposureTexture, uint2(0,0)).r;
+        float exposureValue = LOAD_TEXTURE2D(_ExposureTexture, uint2(0,0)).r;
         float compensatedExposure = exposureValue * 1; // Temp? Original seems to always use 1 here.
 
         if (compensatedExposure == 0) {
